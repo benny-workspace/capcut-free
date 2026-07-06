@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { newProject } from '@shared/model'
+import { AutoEditDialog } from './components/AutoEdit'
 import { ExportDialog } from './components/ExportDialog'
 import { Inspector } from './components/Inspector'
 import { MediaPool } from './components/MediaPool'
@@ -13,6 +15,7 @@ export default function App(): React.JSX.Element {
   const sys = useEditor((s) => s.sys)
   const projectName = useEditor((s) => s.project.name)
   const [exportOpen, setExportOpen] = useState(false)
+  const [autoEditOpen, setAutoEditOpen] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -56,10 +59,20 @@ export default function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const newProjectClick = (): void => {
+    if (!window.confirm('Start a new empty project? Current work stays autosaved.')) return
+    const s = useEditor.getState()
+    s.init(newProject('My project', 1080, 1920))
+    s.setSaveState('dirty') // autosave adopts the new project as "last"
+  }
+
   return (
     <div className="app">
       <div className="topbar">
         <span className="brand">LocalCut</span>
+        <button className="btn small" onClick={newProjectClick} title="Start a new empty project">
+          New
+        </button>
         <span className="project-name" title="Rename in the Inspector (deselect any clip)">
           {projectName}
         </span>
@@ -77,6 +90,9 @@ export default function App(): React.JSX.Element {
             {sys.qsv ? 'Quick Sync ✓' : 'CPU encode'}
           </span>
         )}
+        <button className="btn" onClick={() => setAutoEditOpen(true)}>
+          ✨ Auto-Edit
+        </button>
         <button className="btn primary" onClick={() => setExportOpen(true)}>
           Export
         </button>
@@ -88,6 +104,7 @@ export default function App(): React.JSX.Element {
       </div>
       <Timeline />
       {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
+      {autoEditOpen && <AutoEditDialog onClose={() => setAutoEditOpen(false)} />}
     </div>
   )
 }

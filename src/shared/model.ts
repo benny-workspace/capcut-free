@@ -8,6 +8,8 @@ export interface MediaItem {
   path: string
   /** 720p h264 proxy used for preview when the source codec can't play in Chromium */
   proxyPath?: string
+  /** VP9+alpha webm produced by the background-removal tool */
+  mattePath?: string
   name: string
   type: MediaType
   duration: number // seconds; images get a nominal duration
@@ -78,6 +80,19 @@ export interface Transition {
   duration: number // seconds of overlap with the next main-track clip
 }
 
+export interface WordStamp {
+  t0: number // clip-local timeline seconds
+  t1: number
+  text: string
+}
+
+export type KfProp = 'x' | 'y' | 'scale' | 'rotation' | 'opacity'
+
+export interface Keyframe {
+  t: number // clip-local timeline seconds
+  v: number
+}
+
 export interface Clip {
   id: string
   kind: ClipKind
@@ -89,15 +104,57 @@ export interface Clip {
   muted: boolean
   speed: number // playback rate; source seconds consumed = duration * speed
   transform: Transform
+  keyframes?: Partial<Record<KfProp, Keyframe[]>>
   color?: ColorAdjust
   chromaKey?: ChromaKey
   mask?: Mask
+  /** render via the media's alpha matte (AI background removal) */
+  bgRemoved?: boolean
   fadeIn?: number // audio fade-in, seconds
   fadeOut?: number // audio fade-out, seconds
   /** main-track only: transition into the following clip */
   transitionAfter?: Transition
   text?: string
   textStyle?: TextStyle
+  /** word-level timing behind auto captions (karaoke data) */
+  words?: WordStamp[]
+}
+
+/** Transform at a clip-local time, honoring keyframes (linear interpolation). */
+export function evalTransform(clip: Clip, tLocal: number): Transform {
+  const kf = clip.keyframes
+  if (!kf) return clip.transform
+  const out: Transform = { ...clip.transform }
+  for (const prop of ['x', 'y', 'scale', 'rotation', 'opacity'] as KfProp[]) {
+    const list = kf[prop]
+    if (!list || list.length === 0) continue
+    if (tLocal <= list[0].t) {
+      out[prop] = list[0].v
+      continue
+    }
+    if (tLocal >= list[list.length - 1].t) {
+      out[prop] = list[list.length - 1].v
+      continue
+    }
+    for (let i = 0; i < list.length - 1; i++) {
+      if (tLocal >= list[i].t && tLocal <= list[i + 1].t) {
+        const span = list[i + 1].t - list[i].t
+        const p = span > 0 ? (tLocal - list[i].t) / span : 0
+        // smoothstep easing reads better than raw linear for motion
+        const e = p * p * (3 - 2 * p)
+        out[prop] = list[i].v + (list[i + 1].v - list[i].v) * e
+        break
+      }
+    }
+  }
+  return out
+}
+
+export function hasKeyframes(clip: Clip): boolean {
+  const kf = clip.keyframes
+  if (!kf) return false
+  for (const k of Object.values(kf)) if (k && k.length > 0) return true
+  return false
 }
 
 export type TrackKind = 'video' | 'overlay' | 'text' | 'audio'
@@ -148,6 +205,10 @@ export interface SysInfo {
   ffmpegFound: boolean
   qsv: boolean
   ffmpegVersion?: string
+  /** whisper.cpp binary + model present (auto captions) */
+  whisper: boolean
+  /** MODNet model present (background removal) */
+  modnet: boolean
 }
 
 export const defaultTransform = (): Transform => ({ x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 })
@@ -200,6 +261,8 @@ export function needsFramePipe(project: Project): boolean {
       if (c.kind === 'adjust') return true
       if (c.chromaKey?.enabled) return true
       if (c.mask) return true
+      if (c.bgRemoved) return true
+      if (hasKeyframes(c)) return true
     }
   }
   return false

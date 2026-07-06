@@ -7,6 +7,9 @@ import { findClip, useEditor } from '../store'
 const trackHeight = (kind: Track['kind']): number =>
   kind === 'video' ? 56 : kind === 'overlay' ? 44 : 32
 
+const trackIcon = (kind: Track['kind']): string =>
+  kind === 'video' ? '🎬' : kind === 'overlay' ? '▦' : kind === 'text' ? '𝐓' : '♪'
+
 function trackAccepts(track: Track, clip: Clip): boolean {
   if (clip.kind === 'text') return track.kind === 'text'
   if (clip.kind === 'audio') return track.kind === 'audio'
@@ -316,6 +319,7 @@ export function Timeline(): React.JSX.Element {
               className="tl-label"
               style={{ height: trackHeight(track.kind) }}
             >
+              <span className="tl-label-icon">{trackIcon(track.kind)}</span>
               {track.name}
             </div>
           ))}

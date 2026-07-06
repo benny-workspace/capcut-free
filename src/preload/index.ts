@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-const RECEIVE_CHANNELS = ['media:proxy-ready', 'export:progress'] as const
+const RECEIVE_CHANNELS = ['media:proxy-ready', 'export:progress', 'bgremove:progress'] as const
 
 const api = {
   openMediaDialog: (): Promise<string[]> => ipcRenderer.invoke('dialog:open-media'),
@@ -18,6 +18,15 @@ const api = {
   export2End: (): Promise<unknown> => ipcRenderer.invoke('export2:end'),
   export2Cancel: (): Promise<void> => ipcRenderer.invoke('export2:cancel'),
   smokeSetup: (): Promise<unknown> => ipcRenderer.invoke('smoke:setup'),
+  toolSilence: (path: string, start: number, dur: number): Promise<unknown> =>
+    ipcRenderer.invoke('tool:silence', path, start, dur),
+  toolScenes: (path: string, start: number, dur: number, thr?: number): Promise<unknown> =>
+    ipcRenderer.invoke('tool:scenes', path, start, dur, thr),
+  toolBeats: (path: string): Promise<unknown> => ipcRenderer.invoke('tool:beats', path),
+  toolTranscribe: (path: string, start: number, dur: number, lang?: string): Promise<unknown> =>
+    ipcRenderer.invoke('tool:transcribe', path, start, dur, lang),
+  toolRemoveBg: (path: string, mediaId: string, duration: number): Promise<unknown> =>
+    ipcRenderer.invoke('tool:remove-bg', path, mediaId, duration),
   sysInfo: (): Promise<unknown> => ipcRenderer.invoke('sys:info'),
   showItemInFolder: (path: string): Promise<void> => ipcRenderer.invoke('shell:show-item', path),
   on: (channel: (typeof RECEIVE_CHANNELS)[number], cb: (payload: unknown) => void): (() => void) => {

@@ -65,14 +65,20 @@ export function Preview(): React.JSX.Element {
     const audios = audioEls.current
     const images = imageEls.current
 
-    const getVideoEl = (media: MediaItem): HTMLVideoElement => {
-      const src = mediaUrl(media.proxyPath || media.path)
-      let el = videos.get(media.id)
+    // bg-removed clips play the alpha-matte webm instead of the source
+    const useMatte = (media: MediaItem, clip?: Clip): boolean =>
+      !!(clip?.bgRemoved && media.mattePath)
+
+    const getVideoEl = (media: MediaItem, clip?: Clip): HTMLVideoElement => {
+      const matte = useMatte(media, clip)
+      const key = (matte ? 'matte:' : '') + media.id
+      const src = mediaUrl(matte ? media.mattePath! : media.proxyPath || media.path)
+      let el = videos.get(key)
       if (el && el.dataset.src !== src) {
         el.pause()
         el.removeAttribute('src')
         el.load()
-        videos.delete(media.id)
+        videos.delete(key)
         el = undefined
       }
       if (!el) {
@@ -81,7 +87,7 @@ export function Preview(): React.JSX.Element {
         el.src = src
         el.preload = 'auto'
         el.crossOrigin = 'anonymous'
-        videos.set(media.id, el)
+        videos.set(key, el)
       }
       return el
     }
@@ -97,8 +103,8 @@ export function Preview(): React.JSX.Element {
     }
 
     const sources: SourceProvider = {
-      getVideo(media) {
-        const el = getVideoEl(media)
+      getVideo(media, clip) {
+        const el = getVideoEl(media, clip)
         if (el.readyState < 2) return null
         return { source: el, w: el.videoWidth || media.width || 1, h: el.videoHeight || media.height || 1 }
       },
@@ -163,7 +169,7 @@ export function Preview(): React.JSX.Element {
       for (const { clip, media } of videoClips(s.project)) {
         const isActive = t >= clip.start && t < clip.start + clip.duration
         if (!isActive) continue
-        const el = getVideoEl(media)
+        const el = getVideoEl(media, clip)
         syncPlayable(el, clip, t, s.playing, transAlpha.get(clip.id) ?? 1)
         activePlayables.add(el)
       }

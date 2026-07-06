@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
+import { spawn } from 'child_process'
 import { createReadStream, existsSync, promises as fs } from 'fs'
 import { join } from 'path'
 import { Readable } from 'stream'
@@ -25,6 +26,15 @@ import {
   thumbnailDataUrl
 } from './ffmpeg'
 import { cacheDir, ensureDataDirs, loadLastProject, proxiesDir, saveProject } from './projects'
+import {
+  detectBeats,
+  detectScenes,
+  detectSilence,
+  modnetAvailable,
+  transcribe,
+  whisperAvailable
+} from './tools'
+import { removeBackground } from './toolsBg'
 
 const SMOKE = !!process.env.LOCALCUT_SMOKE
 
@@ -96,11 +106,17 @@ function registerMediaProtocol(): void {
 
 // ---------- smoke-test support: generated assets + rendered-file check ----------
 
-async function smokeSetupAssets(): Promise<{ basePath: string; greenPath: string; outPath: string }> {
+async function smokeSetupAssets(): Promise<{
+  basePath: string
+  greenPath: string
+  speechPath: string
+  outPath: string
+}> {
   const dir = join(cacheDir(), 'smoke')
   await fs.mkdir(dir, { recursive: true })
   const basePath = join(dir, 'base.mp4')
   const greenPath = join(dir, 'green.mp4')
+  const speechPath = join(dir, 'speech.mp4')
   const outPath = join(dir, 'out.mp4')
   if (!existsSync(basePath)) {
     await run(ffmpegPath(), [
@@ -120,7 +136,35 @@ async function smokeSetupAssets(): Promise<{ basePath: string; greenPath: string
       greenPath
     ])
   }
-  return { basePath, greenPath, outPath }
+  if (!existsSync(speechPath)) {
+    // real speech (Windows SAPI) with a long pause, over a test pattern —
+    // exercises silence cut + captions exactly like user footage would
+    const wav = join(dir, 'speech.wav')
+    const ps = [
+      'Add-Type -AssemblyName System.Speech;',
+      '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;',
+      `$s.SetOutputToWaveFile('${wav.replace(/'/g, "''")}');`,
+      "$s.Speak('Welcome to Local Cut.');",
+      '$b = New-Object System.Speech.Synthesis.PromptBuilder;',
+      '$b.AppendBreak([TimeSpan]::FromSeconds(2));',
+      '$s.Speak($b);',
+      "$s.Speak('Captions work offline.');",
+      '$s.Dispose();'
+    ].join(' ')
+    await new Promise<void>((resolve) => {
+      const child = spawn('powershell', ['-NoProfile', '-Command', ps], { windowsHide: true })
+      child.on('close', () => resolve())
+      child.on('error', () => resolve())
+    })
+    await run(ffmpegPath(), [
+      '-y', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=30',
+      '-i', wav,
+      '-map', '0:v', '-map', '1:a', '-shortest',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', '-c:a', 'aac',
+      speechPath
+    ])
+  }
+  return { basePath, greenPath, speechPath, outPath }
 }
 
 async function verifySmokeExport(outPath: string): Promise<boolean> {
@@ -245,9 +289,25 @@ function registerIpc(): void {
     return {
       ffmpegFound: !!version,
       qsv: version ? await detectQsv() : false,
-      ffmpegVersion: version
+      ffmpegVersion: version,
+      whisper: whisperAvailable(),
+      modnet: modnetAvailable()
     }
   })
+
+  ipcMain.handle('tool:silence', (_e, path: string, start: number, dur: number) =>
+    detectSilence(path, start, dur)
+  )
+  ipcMain.handle('tool:scenes', (_e, path: string, start: number, dur: number, thr?: number) =>
+    detectScenes(path, start, dur, thr)
+  )
+  ipcMain.handle('tool:beats', (_e, path: string) => detectBeats(path))
+  ipcMain.handle('tool:transcribe', (_e, path: string, start: number, dur: number, lang?: string) =>
+    transcribe(path, start, dur, lang)
+  )
+  ipcMain.handle('tool:remove-bg', (e, path: string, mediaId: string, duration: number) =>
+    removeBackground(e.sender, path, mediaId, duration)
+  )
 
   ipcMain.handle('shell:show-item', (_e, path: string) => shell.showItemInFolder(path))
 }
@@ -262,6 +322,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     title: 'LocalCut',
+    icon: join(appRoot(), 'assets', 'localcut.ico'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -293,8 +354,16 @@ function createWindow(): void {
       void (async () => {
         let pass = false
         try {
-          const result = JSON.parse(message.slice('SMOKE-RESULT '.length)) as { ok: boolean }
+          const result = JSON.parse(message.slice('SMOKE-RESULT '.length)) as {
+            ok: boolean
+            phase2?: { segments: number; captions: number }
+          }
           if (result.ok) pass = await verifySmokeExport(join(cacheDir(), 'smoke', 'out.mp4'))
+          const p2 = result.phase2
+          if (pass && (!p2 || p2.segments < 2 || p2.captions < 1)) {
+            console.error(`SMOKE phase2 failed: ${JSON.stringify(p2)} (need >=2 segments, >=1 caption)`)
+            pass = false
+          }
         } catch (e) {
           console.error('SMOKE verify error', e)
         }
@@ -316,6 +385,8 @@ function createWindow(): void {
     }, 150000)
   }
 }
+
+app.setAppUserModelId('com.localcut.app')
 
 app.whenReady().then(async () => {
   await ensureDataDirs()

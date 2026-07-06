@@ -38,14 +38,17 @@ function seekTo(el: HTMLVideoElement, time: number): Promise<void> {
   })
 }
 
-function loadVideo(media: MediaItem): Promise<HTMLVideoElement> {
+function loadVideo(media: MediaItem, matte: boolean): Promise<HTMLVideoElement> {
   const el = document.createElement('video')
   el.muted = true
   el.preload = 'auto'
   // original file when Chromium can decode it; otherwise the preview proxy
   // (720p) — honest limitation until WebCodecs/ffmpeg-decode lands
-  const usable =
-    PLAYABLE_VCODECS.includes(media.vcodec || '') || !media.proxyPath ? media.path : media.proxyPath
+  const usable = matte
+    ? media.mattePath!
+    : PLAYABLE_VCODECS.includes(media.vcodec || '') || !media.proxyPath
+      ? media.path
+      : media.proxyPath
   el.src = mediaUrl(usable)
   return new Promise((resolve) => {
     let settled = false
@@ -79,28 +82,31 @@ export async function runFramePipeExport(
     return { ok: false, error: 'WebGL2 unavailable: ' + (e instanceof Error ? e.message : e) }
   }
 
-  // dedicated seekable elements per video media used on visual tracks
+  // dedicated seekable elements per (media, matte) pair used on visual tracks
   const videoEls = new Map<string, HTMLVideoElement>()
   const imageEls = new Map<string, HTMLImageElement>()
   const mediaById = new Map(project.media.map((m) => [m.id, m]))
-  const videoMediaIds = new Set<string>()
+  const keyFor = (clip: { bgRemoved?: boolean }, media: MediaItem): string =>
+    (clip.bgRemoved && media.mattePath ? 'matte:' : '') + media.id
+  const wanted = new Map<string, { media: MediaItem; matte: boolean }>()
   for (const track of project.tracks) {
     if (track.kind !== 'video' && track.kind !== 'overlay') continue
     for (const clip of track.clips) {
-      if (clip.kind === 'video' && clip.mediaId && mediaById.has(clip.mediaId)) {
-        videoMediaIds.add(clip.mediaId)
-      }
+      if (clip.kind !== 'video' || !clip.mediaId) continue
+      const media = mediaById.get(clip.mediaId)
+      if (!media) continue
+      wanted.set(keyFor(clip, media), { media, matte: !!(clip.bgRemoved && media.mattePath) })
     }
   }
   await Promise.all(
-    [...videoMediaIds].map(async (id) => {
-      videoEls.set(id, await loadVideo(mediaById.get(id)!))
+    [...wanted.entries()].map(async ([key, w]) => {
+      videoEls.set(key, await loadVideo(w.media, w.matte))
     })
   )
 
   const sources: SourceProvider = {
-    getVideo(media) {
-      const el = videoEls.get(media.id)
+    getVideo(media, clip) {
+      const el = videoEls.get(keyFor(clip, media))
       if (!el || el.readyState < 2) return null
       return { source: el, w: el.videoWidth || media.width || 1, h: el.videoHeight || media.height || 1 }
     },
@@ -147,7 +153,8 @@ export async function runFramePipeExport(
         for (const clip of track.clips) {
           if (clip.kind !== 'video' || !clip.mediaId) continue
           if (t < clip.start || t >= clip.start + clip.duration) continue
-          const el = videoEls.get(clip.mediaId)
+          const media = mediaById.get(clip.mediaId)
+          const el = media ? videoEls.get(keyFor(clip, media)) : undefined
           if (el) seeks.push(seekTo(el, clip.in + (t - clip.start) * (clip.speed || 1)))
         }
       }

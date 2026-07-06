@@ -24,11 +24,25 @@ interface Api {
   export2Frame(buf: ArrayBuffer): Promise<boolean>
   export2End(): Promise<ExportResult>
   export2Cancel(): Promise<void>
-  smokeSetup(): Promise<{ basePath: string; greenPath: string; outPath: string }>
+  smokeSetup(): Promise<{ basePath: string; greenPath: string; speechPath: string; outPath: string }>
+  toolSilence(path: string, start: number, dur: number): Promise<{ start: number; end: number }[]>
+  toolScenes(path: string, start: number, dur: number, thr?: number): Promise<number[]>
+  toolBeats(path: string): Promise<{ beats: number[]; bpm: number }>
+  toolTranscribe(
+    path: string,
+    start: number,
+    dur: number,
+    lang?: string
+  ): Promise<{ ok: boolean; words: { t0: number; t1: number; text: string }[]; error?: string }>
+  toolRemoveBg(
+    path: string,
+    mediaId: string,
+    duration: number
+  ): Promise<{ ok: boolean; mattePath?: string; error?: string }>
   sysInfo(): Promise<SysInfo>
   showItemInFolder(path: string): Promise<void>
   on(
-    channel: 'media:proxy-ready' | 'export:progress',
+    channel: 'media:proxy-ready' | 'export:progress' | 'bgremove:progress',
     cb: (payload: unknown) => void
   ): () => void
 }
