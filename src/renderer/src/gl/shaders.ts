@@ -51,7 +51,10 @@ vec3 applyColor(vec3 rgb) {
 }
 
 void main() {
-  vec4 c = texture(uTex, vUv);
+  // modes 1/2 sample the accumulation FBO, whose rows are stored in GL
+  // window order (bottom-up relative to the canvas-space layer pass)
+  vec2 uv = uMode == 0 ? vUv : vec2(vUv.x, 1.0 - vUv.y);
+  vec4 c = texture(uTex, uv);
 
   if (uMode == 2) { outColor = c; return; }
 

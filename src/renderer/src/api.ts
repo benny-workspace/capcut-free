@@ -20,6 +20,11 @@ interface Api {
   loadLastProject(): Promise<Project | null>
   exportRun(p: Project, s: ExportSettings, textPngs: TextPngPayload[]): Promise<ExportResult>
   exportCancel(): Promise<void>
+  export2Start(p: Project, s: ExportSettings): Promise<{ ok: boolean; encoder?: string; error?: string }>
+  export2Frame(buf: ArrayBuffer): Promise<boolean>
+  export2End(): Promise<ExportResult>
+  export2Cancel(): Promise<void>
+  smokeSetup(): Promise<{ basePath: string; greenPath: string; outPath: string }>
   sysInfo(): Promise<SysInfo>
   showItemInFolder(path: string): Promise<void>
   on(

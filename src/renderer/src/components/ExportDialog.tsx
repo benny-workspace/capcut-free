@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ExportResult, ExportSettings } from '@shared/model'
-import { projectDuration } from '@shared/model'
+import { needsFramePipe, projectDuration } from '@shared/model'
 import type { ExportProgress } from '../api'
 import { api } from '../api'
+import { runFramePipeExport, type CancelToken } from '../exportFramePipe'
 import { formatTime, renderTextPngDataUrl } from '../lib'
 import { useEditor } from '../store'
 
@@ -42,6 +43,8 @@ export function ExportDialog({ onClose }: { onClose: () => void }): React.JSX.El
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState<ExportProgress | null>(null)
   const [result, setResult] = useState<ExportResult | null>(null)
+  const cancelToken = useRef<CancelToken | null>(null)
+  const usePipe = needsFramePipe(project)
 
   useEffect(() => setPlaying(false), [setPlaying])
   useEffect(() => api.on('export:progress', (p) => setProgress(p as ExportProgress)), [])
@@ -59,12 +62,6 @@ export function ExportDialog({ onClose }: { onClose: () => void }): React.JSX.El
     setRunning(true)
     setResult(null)
     setProgress({ ratio: 0, phase: 'preparing' })
-    // Text is rasterized at project resolution; the compiler scales it to the
-    // output frame, so text keeps its relative size at any export resolution.
-    const textPngs = project.tracks
-      .flatMap((t) => t.clips)
-      .filter((c) => c.kind === 'text' && (c.text || '').trim().length > 0)
-      .map((c) => ({ clipId: c.id, dataUrl: renderTextPngDataUrl(c, project.width, project.height) }))
     const settings: ExportSettings = {
       outPath,
       width: p.w,
@@ -73,13 +70,32 @@ export function ExportDialog({ onClose }: { onClose: () => void }): React.JSX.El
       vBitrateK: bitrateK,
       encoder
     }
-    const r = await api.exportRun(project, settings, textPngs)
+    let r: ExportResult
+    if (usePipe) {
+      // GPU compositor renders every frame (chroma key / masks / adjust layers)
+      cancelToken.current = { cancelled: false }
+      r = await runFramePipeExport(
+        project,
+        settings,
+        (ratio) => setProgress({ ratio, phase: 'encoding' }),
+        cancelToken.current
+      )
+    } else {
+      // Text is rasterized at project resolution; the compiler scales it to the
+      // output frame, so text keeps its relative size at any export resolution.
+      const textPngs = project.tracks
+        .flatMap((t) => t.clips)
+        .filter((c) => c.kind === 'text' && (c.text || '').trim().length > 0)
+        .map((c) => ({ clipId: c.id, dataUrl: renderTextPngDataUrl(c, project.width, project.height) }))
+      r = await api.exportRun(project, settings, textPngs)
+    }
     setRunning(false)
     setResult(r)
   }
 
   const cancel = async (): Promise<void> => {
-    await api.exportCancel()
+    if (cancelToken.current) cancelToken.current.cancelled = true
+    else await api.exportCancel()
     setRunning(false)
     setProgress(null)
   }
@@ -160,6 +176,14 @@ export function ExportDialog({ onClose }: { onClose: () => void }): React.JSX.El
               <div className="insp-row">
                 <span className="insp-label">Duration</span>
                 <span className="insp-value">{formatTime(dur)}</span>
+              </div>
+              <div className="insp-row">
+                <span className="insp-label">Engine</span>
+                <span className="engine-note">
+                  {usePipe
+                    ? 'GPU frame pipe (chroma key / mask / adjust in use — slower, exact)'
+                    : 'FFmpeg filtergraph (fast path)'}
+                </span>
               </div>
               {result && !result.ok && (
                 <pre className="export-error">{result.error}</pre>

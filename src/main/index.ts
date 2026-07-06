@@ -270,73 +270,50 @@ function createWindow(): void {
     }
   })
 
-  win.once('ready-to-show', () => win?.show())
+  // smoke runs must not steal keyboard focus — ambient keystrokes would
+  // activate focused buttons and corrupt the scripted scenario
+  win.once('ready-to-show', () => (SMOKE ? win?.showInactive() : win?.show()))
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    void win.loadURL(process.env.ELECTRON_RENDERER_URL)
+    void win.loadURL(process.env.ELECTRON_RENDERER_URL + (SMOKE ? '?smoke=1' : ''))
   } else {
-    void win.loadFile(join(__dirname, '../renderer/index.html'))
+    void win.loadFile(
+      join(__dirname, '../renderer/index.html'),
+      SMOKE ? { query: { smoke: '1' } } : undefined
+    )
   }
 
   if (SMOKE) {
-    win.webContents.on('console-message', (_e, level, message) => {
-      if (level >= 2) console.log('[renderer]', message)
-    })
-    win.webContents.once('did-finish-load', () => {
-      setTimeout(async () => {
+    // The renderer runs the scripted scenario (src/renderer/src/smoke.ts) and
+    // reports via console; main verifies the rendered file and exits.
+    win.webContents.on('console-message', (event) => {
+      const { level, message } = event as unknown as { level: string; message: string }
+      if (level === 'warning' || level === 'error') console.log('[renderer]', message)
+      if (!message.startsWith('SMOKE-RESULT ')) return
+      void (async () => {
+        let pass = false
         try {
-          // populate the timeline through the store so the screenshot shows real UI state
-          const diag = await win!.webContents.executeJavaScript(`(() => {
-            const ed = window.__editor
-            if (ed) {
-              // reset any autosaved state so smoke runs are deterministic
-              for (const m of [...ed.getState().project.media]) ed.getState().removeMedia(m.id)
-              for (const tr of ed.getState().project.tracks)
-                for (const c of [...tr.clips]) ed.getState().deleteClip(c.id)
-              ed.getState().addMedia([
-                { id: 'demo1', path: 'X:/demo1.mp4', name: 'demo1.mp4', type: 'video', duration: 5, width: 1920, height: 1080, fps: 30, hasAudio: true, vcodec: 'h264' },
-                { id: 'demo2', path: 'X:/demo2.mp4', name: 'demo2.mp4', type: 'video', duration: 3, width: 1920, height: 1080, fps: 30, hasAudio: true, vcodec: 'h264' }
-              ])
-              ed.getState().addToTimeline('demo1')
-              ed.getState().addToTimeline('demo2')
-              ed.getState().addTextClip()
-              const main = ed.getState().project.tracks.find((t) => t.id === 'main')
-              ed.getState().updateClip(main.clips[0].id, {
-                speed: 2,
-                transitionAfter: { type: 'cross', duration: 0.5 },
-                color: { exposure: 0.1, contrast: 0.2, saturation: 0.4, temperature: 0.4 }
-              })
-              ed.getState().select(main.clips[0].id)
-              ed.getState().setPlayhead(2)
-            }
-            const styleOf = (sel) => {
-              const el = document.querySelector(sel)
-              if (!el) return 'MISSING'
-              const r = el.getBoundingClientRect()
-              return getComputedStyle(el).backgroundColor + ' @ ' + Math.round(r.left) + ',' + Math.round(r.top) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height)
-            }
-            return JSON.stringify({
-              hasEditor: !!ed,
-              mainTrack: styleOf('.tl-track.kind-video'),
-              overlayTrack: styleOf('.tl-track.kind-overlay'),
-              clips: document.querySelectorAll('.tl-clip').length,
-              importBtn: document.querySelector('.media-pool .btn.primary')?.textContent,
-              activeEl: document.activeElement?.tagName + '.' + document.activeElement?.className
-            })
-          })()`)
-          console.log('SMOKE DIAG ' + diag)
-          await new Promise((r) => setTimeout(r, 800))
-          const img = await win!.webContents.capturePage()
-          const out = process.env.LOCALCUT_SMOKE_OUT || join(app.getAppPath(), 'smoke.png')
-          await fs.writeFile(out, img.toPNG())
-          console.log('SMOKE OK -> ' + out)
+          const result = JSON.parse(message.slice('SMOKE-RESULT '.length)) as { ok: boolean }
+          if (result.ok) pass = await verifySmokeExport(join(cacheDir(), 'smoke', 'out.mp4'))
         } catch (e) {
-          console.error('SMOKE FAILED', e)
+          console.error('SMOKE verify error', e)
         }
-        app.exit(0)
-      }, 5000)
+        try {
+          const img = await win!.webContents.capturePage()
+          const out = process.env.LOCALCUT_SMOKE_OUT || join(appRoot(), 'smoke.png')
+          await fs.writeFile(out, img.toPNG())
+          console.log('SMOKE screenshot -> ' + out)
+        } catch (e) {
+          console.error('SMOKE screenshot failed', e)
+        }
+        console.log(pass ? 'SMOKE OK' : 'SMOKE FAILED')
+        app.exit(pass ? 0 : 1)
+      })()
     })
-    setTimeout(() => app.exit(1), 40000)
+    setTimeout(() => {
+      console.error('SMOKE TIMEOUT')
+      app.exit(1)
+    }, 150000)
   }
 }
 

@@ -12,6 +12,12 @@ const api = {
   exportRun: (project: unknown, settings: unknown, textPngs: unknown[]): Promise<unknown> =>
     ipcRenderer.invoke('export:run', project, settings, textPngs),
   exportCancel: (): Promise<void> => ipcRenderer.invoke('export:cancel'),
+  export2Start: (project: unknown, settings: unknown): Promise<unknown> =>
+    ipcRenderer.invoke('export2:start', project, settings),
+  export2Frame: (buf: ArrayBuffer): Promise<boolean> => ipcRenderer.invoke('export2:frame', buf),
+  export2End: (): Promise<unknown> => ipcRenderer.invoke('export2:end'),
+  export2Cancel: (): Promise<void> => ipcRenderer.invoke('export2:cancel'),
+  smokeSetup: (): Promise<unknown> => ipcRenderer.invoke('smoke:setup'),
   sysInfo: (): Promise<unknown> => ipcRenderer.invoke('sys:info'),
   showItemInFolder: (path: string): Promise<void> => ipcRenderer.invoke('shell:show-item', path),
   on: (channel: (typeof RECEIVE_CHANNELS)[number], cb: (payload: unknown) => void): (() => void) => {

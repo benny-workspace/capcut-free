@@ -673,6 +673,11 @@ input[type='checkbox'] {
   margin-top: 4px;
 }
 
+.engine-note {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
 .progress-track {
   height: 10px;
   background: var(--bg);

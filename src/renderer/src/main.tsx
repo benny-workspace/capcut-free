@@ -36,6 +36,11 @@ async function boot(): Promise<void> {
   createRoot(document.getElementById('root')!).render(<App />)
   // deliberate escape hatch for scripted smoke/UI tests
   ;(window as unknown as Record<string, unknown>).__editor = useEditor
+
+  if (hasApi && new URLSearchParams(location.search).has('smoke')) {
+    const { runSmoke } = await import('./smoke')
+    void runSmoke()
+  }
 }
 
 void boot()
