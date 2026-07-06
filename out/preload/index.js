@@ -1,6 +1,6 @@
 "use strict";
 const electron = require("electron");
-const RECEIVE_CHANNELS = ["media:proxy-ready", "export:progress"];
+const RECEIVE_CHANNELS = ["media:proxy-ready", "export:progress", "bgremove:progress"];
 const api = {
   openMediaDialog: () => electron.ipcRenderer.invoke("dialog:open-media"),
   savePathDialog: (defaultName) => electron.ipcRenderer.invoke("dialog:save-path", defaultName),
@@ -14,6 +14,11 @@ const api = {
   export2End: () => electron.ipcRenderer.invoke("export2:end"),
   export2Cancel: () => electron.ipcRenderer.invoke("export2:cancel"),
   smokeSetup: () => electron.ipcRenderer.invoke("smoke:setup"),
+  toolSilence: (path, start, dur) => electron.ipcRenderer.invoke("tool:silence", path, start, dur),
+  toolScenes: (path, start, dur, thr) => electron.ipcRenderer.invoke("tool:scenes", path, start, dur, thr),
+  toolBeats: (path) => electron.ipcRenderer.invoke("tool:beats", path),
+  toolTranscribe: (path, start, dur, lang) => electron.ipcRenderer.invoke("tool:transcribe", path, start, dur, lang),
+  toolRemoveBg: (path, mediaId, duration) => electron.ipcRenderer.invoke("tool:remove-bg", path, mediaId, duration),
   sysInfo: () => electron.ipcRenderer.invoke("sys:info"),
   showItemInFolder: (path) => electron.ipcRenderer.invoke("shell:show-item", path),
   on: (channel, cb) => {

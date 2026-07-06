@@ -1,5 +1,5 @@
-import type { Clip, ColorAdjust, Project } from '@shared/model'
-import { defaultColor, transitionOverlap } from '@shared/model'
+import type { Clip, ColorAdjust, Project, WordStamp } from '@shared/model'
+import { defaultColor, defaultTextStyle, defaultTransform, transitionOverlap } from '@shared/model'
 
 export interface FitRect {
   w: number
@@ -144,6 +144,45 @@ export function transitionAlphas(project: Project, t: number): Map<string, numbe
     }
   }
   return map
+}
+
+/** Group timeline-absolute word stamps into styled caption text clips. */
+export function captionClipsFromWords(
+  words: WordStamp[],
+  big: boolean,
+  mkId: () => string
+): Clip[] {
+  const groups: WordStamp[][] = []
+  let cur: WordStamp[] = []
+  for (const w of words) {
+    const first = cur[0]
+    const prev = cur[cur.length - 1]
+    if (cur.length >= 4 || (first && w.t1 - first.t0 > 2.4) || (prev && w.t0 - prev.t1 > 0.55)) {
+      if (cur.length > 0) groups.push(cur)
+      cur = []
+    }
+    cur.push(w)
+  }
+  if (cur.length > 0) groups.push(cur)
+
+  return groups.map((g) => {
+    const t0 = g[0].t0
+    const t1 = g[g.length - 1].t1
+    return {
+      id: mkId(),
+      kind: 'text' as const,
+      start: t0,
+      duration: Math.max(0.3, t1 - t0 + 0.12),
+      in: 0,
+      volume: 0,
+      muted: true,
+      speed: 1,
+      transform: { ...defaultTransform(), y: big ? 0.3 : 0.38 },
+      text: g.map((w) => w.text).join(' '),
+      textStyle: { ...defaultTextStyle(), fontSize: big ? 84 : 60, outlineWidth: big ? 6 : 5 },
+      words: g.map((w) => ({ text: w.text, t0: w.t0 - t0, t1: w.t1 - t0 }))
+    }
+  })
 }
 
 /** Audio gain envelope from user fades at timeline time t (clip active assumed). */

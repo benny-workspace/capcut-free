@@ -2,6 +2,7 @@
 // frame-pipe exporter so both produce identical frames.
 
 import type { Clip, MediaItem, Project } from '@shared/model'
+import { evalTransform } from '@shared/model'
 import { drawTextClip, fitRect, transitionAlphas } from '../lib'
 import type { Compositor } from './compositor'
 
@@ -63,7 +64,8 @@ export function renderFrame(
     if ((track.kind !== 'video' && track.kind !== 'overlay') || track.muted) continue
     for (const clip of track.clips) {
       if (!active(clip, t)) continue
-      const alpha = clip.transform.opacity * (transAlpha.get(clip.id) ?? 1)
+      const tf = evalTransform(clip, t - clip.start)
+      const alpha = tf.opacity * (transAlpha.get(clip.id) ?? 1)
       if (alpha <= 0) continue
 
       if (clip.kind === 'adjust') {
@@ -77,12 +79,12 @@ export function renderFrame(
         clip.kind === 'video' ? sources.getVideo(media, clip) : sources.getImage(media)
       if (!src) continue
       comp.drawLayer({
-        ownerId: 'm:' + media.id,
+        ownerId: (clip.bgRemoved && media.mattePath ? 'mm:' : 'm:') + media.id,
         source: src.source,
         dynamic: clip.kind === 'video',
         contentKey: clip.kind === 'video' ? undefined : 'static',
-        rect: fitRect(src.w, src.h, outW, outH, clip),
-        rotationDeg: clip.transform.rotation,
+        rect: fitRect(src.w, src.h, outW, outH, { ...clip, transform: tf }),
+        rotationDeg: tf.rotation,
         opacity: alpha,
         color: clip.color,
         chromaKey: clip.chromaKey,

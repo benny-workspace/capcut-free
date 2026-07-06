@@ -678,6 +678,69 @@ input[type='checkbox'] {
   color: var(--text-dim);
 }
 
+.modal.wide {
+  width: 560px;
+}
+
+.btn.kf {
+  padding: 1px 5px;
+  font-size: 11px;
+  color: var(--text-dim);
+  border-radius: 4px;
+}
+
+.btn.kf.active {
+  color: #ffd166;
+  border-color: #ffd166;
+  background: rgba(255, 209, 102, 0.12);
+}
+
+.tool-msg {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 2px 0 2px 72px;
+  user-select: text;
+}
+
+.ae-clips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.ae-clip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--bg-raised);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.ae-clip img {
+  width: 42px;
+  height: 26px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.ae-log {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: Consolas, monospace;
+  padding: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
 .progress-track {
   height: 10px;
   background: var(--bg);

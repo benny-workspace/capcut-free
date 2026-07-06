@@ -58,10 +58,16 @@ export async function runSmoke(): Promise<void> {
     await wait(1800)
 
     log('starting frame-pipe export')
+    let lastLogged = -1
     const result = await runFramePipeExport(
       st().project,
       { outPath: assets.outPath, width: 640, height: 360, fps: 30, vBitrateK: 2500, encoder: 'auto' },
-      () => {},
+      (r) => {
+        if (r - lastLogged >= 0.25) {
+          lastLogged = r
+          log('export ' + Math.round(r * 100) + '%')
+        }
+      },
       { cancelled: false }
     )
     console.warn('SMOKE-RESULT ' + JSON.stringify(result))

@@ -5,7 +5,11 @@ import { app } from 'electron'
 import type { MediaItem } from '../shared/model'
 
 export function appRoot(): string {
-  return app.getAppPath()
+  try {
+    return app.getAppPath()
+  } catch {
+    return process.cwd() // headless test scripts run outside Electron
+  }
 }
 
 export function toolsDir(): string {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AutoEditDialog } from './components/AutoEdit'
 import { ExportDialog } from './components/ExportDialog'
 import { Inspector } from './components/Inspector'
 import { MediaPool } from './components/MediaPool'
@@ -13,6 +14,7 @@ export default function App(): React.JSX.Element {
   const sys = useEditor((s) => s.sys)
   const projectName = useEditor((s) => s.project.name)
   const [exportOpen, setExportOpen] = useState(false)
+  const [autoEditOpen, setAutoEditOpen] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -77,6 +79,9 @@ export default function App(): React.JSX.Element {
             {sys.qsv ? 'Quick Sync ✓' : 'CPU encode'}
           </span>
         )}
+        <button className="btn" onClick={() => setAutoEditOpen(true)}>
+          ✨ Auto-Edit
+        </button>
         <button className="btn primary" onClick={() => setExportOpen(true)}>
           Export
         </button>
@@ -88,6 +93,7 @@ export default function App(): React.JSX.Element {
       </div>
       <Timeline />
       {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
+      {autoEditOpen && <AutoEditDialog onClose={() => setAutoEditOpen(false)} />}
     </div>
   )
 }

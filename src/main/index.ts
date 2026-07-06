@@ -25,6 +25,15 @@ import {
   thumbnailDataUrl
 } from './ffmpeg'
 import { cacheDir, ensureDataDirs, loadLastProject, proxiesDir, saveProject } from './projects'
+import {
+  detectBeats,
+  detectScenes,
+  detectSilence,
+  modnetAvailable,
+  transcribe,
+  whisperAvailable
+} from './tools'
+import { removeBackground } from './toolsBg'
 
 const SMOKE = !!process.env.LOCALCUT_SMOKE
 
@@ -245,9 +254,25 @@ function registerIpc(): void {
     return {
       ffmpegFound: !!version,
       qsv: version ? await detectQsv() : false,
-      ffmpegVersion: version
+      ffmpegVersion: version,
+      whisper: whisperAvailable(),
+      modnet: modnetAvailable()
     }
   })
+
+  ipcMain.handle('tool:silence', (_e, path: string, start: number, dur: number) =>
+    detectSilence(path, start, dur)
+  )
+  ipcMain.handle('tool:scenes', (_e, path: string, start: number, dur: number, thr?: number) =>
+    detectScenes(path, start, dur, thr)
+  )
+  ipcMain.handle('tool:beats', (_e, path: string) => detectBeats(path))
+  ipcMain.handle('tool:transcribe', (_e, path: string, start: number, dur: number, lang?: string) =>
+    transcribe(path, start, dur, lang)
+  )
+  ipcMain.handle('tool:remove-bg', (e, path: string, mediaId: string, duration: number) =>
+    removeBackground(e.sender, path, mediaId, duration)
+  )
 
   ipcMain.handle('shell:show-item', (_e, path: string) => shell.showItemInFolder(path))
 }
@@ -262,6 +287,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     title: 'LocalCut',
+    icon: join(appRoot(), 'assets', 'localcut.ico'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -316,6 +342,8 @@ function createWindow(): void {
     }, 150000)
   }
 }
+
+app.setAppUserModelId('com.localcut.app')
 
 app.whenReady().then(async () => {
   await ensureDataDirs()

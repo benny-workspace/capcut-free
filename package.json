@@ -11,9 +11,11 @@
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test:export": "tsx scripts/test-export.ts",
+    "test:tools": "tsx scripts/test-tools.ts",
     "smoke": "electron-vite build && electron ."
   },
   "dependencies": {
+    "onnxruntime-node": "^1.27.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zustand": "^5.0.3"

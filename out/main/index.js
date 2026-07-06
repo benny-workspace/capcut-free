@@ -4,13 +4,14 @@ const fs = require("fs");
 const path = require("path");
 const stream = require("stream");
 const child_process = require("child_process");
+const os = require("os");
 const isNeutralColor = (c) => !c || c.exposure === 0 && c.contrast === 0 && c.saturation === 0 && c.temperature === 0;
 function projectDuration(project) {
   let end = 0;
   for (const t of project.tracks) for (const c of t.clips) end = Math.max(end, c.start + c.duration);
   return end;
 }
-const f = (n) => (Math.round(n * 1e3) / 1e3).toString();
+const f$1 = (n) => (Math.round(n * 1e3) / 1e3).toString();
 const even = (n) => Math.max(2, 2 * Math.round(n / 2));
 function atempoChain(speed) {
   if (speed === 1) return [];
@@ -20,7 +21,7 @@ function atempoChain(speed) {
     parts.push("atempo=0.5");
     s *= 2;
   }
-  parts.push(`atempo=${f(s)}`);
+  parts.push(`atempo=${f$1(s)}`);
   return parts;
 }
 function colorFilters(clip) {
@@ -28,9 +29,9 @@ function colorFilters(clip) {
   if (!c || isNeutralColor(c)) return [];
   const parts = [];
   const eq = [];
-  if (c.contrast !== 0) eq.push(`contrast=${f(1 + c.contrast)}`);
-  if (c.saturation !== 0) eq.push(`saturation=${f(Math.max(0, 1 + c.saturation))}`);
-  if (c.exposure !== 0) eq.push(`brightness=${f(c.exposure * 0.25)}`);
+  if (c.contrast !== 0) eq.push(`contrast=${f$1(1 + c.contrast)}`);
+  if (c.saturation !== 0) eq.push(`saturation=${f$1(Math.max(0, 1 + c.saturation))}`);
+  if (c.exposure !== 0) eq.push(`brightness=${f$1(c.exposure * 0.25)}`);
   if (eq.length > 0) parts.push("eq=" + eq.join(":"));
   if (c.temperature !== 0) {
     parts.push(`colortemperature=temperature=${Math.round(6500 - c.temperature * 2600)}`);
@@ -72,10 +73,10 @@ function audioFades(clip, trans) {
   const parts = [];
   const fi = Math.max(clip.fadeIn ?? 0, 0);
   const fo = Math.max(clip.fadeOut ?? 0, 0);
-  if (fi > 0) parts.push(`afade=t=in:st=0:d=${f(fi)}`);
-  if (fo > 0) parts.push(`afade=t=out:st=${f(Math.max(0, clip.duration - fo))}:d=${f(fo)}`);
-  if (trans?.ain) parts.push(`afade=t=in:st=${f(trans.ain.st)}:d=${f(trans.ain.d)}`);
-  if (trans?.aout) parts.push(`afade=t=out:st=${f(trans.aout.st)}:d=${f(trans.aout.d)}`);
+  if (fi > 0) parts.push(`afade=t=in:st=0:d=${f$1(fi)}`);
+  if (fo > 0) parts.push(`afade=t=out:st=${f$1(Math.max(0, clip.duration - fo))}:d=${f$1(fo)}`);
+  if (trans?.ain) parts.push(`afade=t=in:st=${f$1(trans.ain.st)}:d=${f$1(trans.ain.d)}`);
+  if (trans?.aout) parts.push(`afade=t=out:st=${f$1(trans.aout.st)}:d=${f$1(trans.aout.d)}`);
   return parts;
 }
 function appendAudioChain(filters, audioLabels, idx, clip, trans) {
@@ -83,11 +84,11 @@ function appendAudioChain(filters, audioLabels, idx, clip, trans) {
   const aLabel = `a${audioLabels.length}`;
   const delayMs = Math.max(0, Math.round(clip.start * 1e3));
   const parts = [
-    `atrim=start=${f(clip.in)}:end=${f(clip.in + clip.duration * speed)}`,
+    `atrim=start=${f$1(clip.in)}:end=${f$1(clip.in + clip.duration * speed)}`,
     "asetpts=PTS-STARTPTS",
     ...atempoChain(speed),
     ...audioFades(clip, trans),
-    `volume=${f(clip.volume)}`,
+    `volume=${f$1(clip.volume)}`,
     "aresample=48000",
     `adelay=${delayMs}:all=1`
   ];
@@ -130,11 +131,11 @@ function buildExportArgs(project, settings, textPngs) {
       audioOnlyClips.push(...track.clips);
     }
   }
-  filters.push(`color=c=black:s=${W}x${H}:r=${settings.fps}:d=${f(dur)}[bg]`);
+  filters.push(`color=c=black:s=${W}x${H}:r=${settings.fps}:d=${f$1(dur)}[bg]`);
   let lastVideo = "bg";
   let overlayIdx = 0;
   const addOverlay = (srcLabel, clip, rect) => {
-    const en = `enable='between(t,${f(clip.start)},${f(clip.start + clip.duration)})'`;
+    const en = `enable='between(t,${f$1(clip.start)},${f$1(clip.start + clip.duration)})'`;
     const next = `ov${overlayIdx++}`;
     filters.push(
       `[${lastVideo}][${srcLabel}]overlay=x=${rect.x}:y=${rect.y}:${en}[${next}]`
@@ -146,18 +147,18 @@ function buildExportArgs(project, settings, textPngs) {
     const parts = [...colorFilters(clip), "format=rgba"];
     if (clip.transform.rotation) {
       const rad = clip.transform.rotation * Math.PI / 180;
-      parts.push(`rotate=${f(rad)}:c=black@0:ow=rotw(${f(rad)}):oh=roth(${f(rad)})`);
+      parts.push(`rotate=${f$1(rad)}:c=black@0:ow=rotw(${f$1(rad)}):oh=roth(${f$1(rad)})`);
     }
     if (clip.transform.opacity < 1) {
-      parts.push(`colorchannelmixer=aa=${f(clip.transform.opacity)}`);
+      parts.push(`colorchannelmixer=aa=${f$1(clip.transform.opacity)}`);
     }
     return parts.join(",");
   };
   const transitionVideoFades = (clip) => {
     const t = transFades.get(clip.id);
     const parts = [];
-    if (t?.vin) parts.push(`fade=t=in:st=${f(t.vin.st)}:d=${f(t.vin.d)}:alpha=1`);
-    if (t?.vout) parts.push(`fade=t=out:st=${f(t.vout.st)}:d=${f(t.vout.d)}:alpha=1`);
+    if (t?.vin) parts.push(`fade=t=in:st=${f$1(t.vin.st)}:d=${f$1(t.vin.d)}:alpha=1`);
+    if (t?.vout) parts.push(`fade=t=out:st=${f$1(t.vout.st)}:d=${f$1(t.vout.d)}:alpha=1`);
     return parts;
   };
   const audioChain = (idx, clip) => appendAudioChain(filters, audioLabels, idx, clip, transFades.get(clip.id));
@@ -172,8 +173,8 @@ function buildExportArgs(project, settings, textPngs) {
       const rect = fitRect(media.width || W, media.height || H, W, H, clip);
       const label = `v${vLabel++}`;
       const chain = [
-        `trim=start=${f(clip.in)}:end=${f(clip.in + clip.duration * speed)}`,
-        `setpts=(PTS-STARTPTS)/${f(speed)}+${f(clip.start)}/TB`,
+        `trim=start=${f$1(clip.in)}:end=${f$1(clip.in + clip.duration * speed)}`,
+        `setpts=(PTS-STARTPTS)/${f$1(speed)}+${f$1(clip.start)}/TB`,
         `scale=${rect.w}:${rect.h}`,
         alphaChain(clip),
         ...transitionVideoFades(clip)
@@ -186,7 +187,7 @@ function buildExportArgs(project, settings, textPngs) {
     } else if (clip.kind === "image" || clip.kind === "text") {
       const path2 = clip.kind === "text" ? pngByClip.get(clip.id) : clip.mediaId ? mediaById.get(clip.mediaId)?.path : void 0;
       if (!path2) continue;
-      inputArgs.push("-loop", "1", "-t", f(clip.duration + 0.5), "-i", path2);
+      inputArgs.push("-loop", "1", "-t", f$1(clip.duration + 0.5), "-i", path2);
       const idx = inputCount++;
       const media = clip.mediaId ? mediaById.get(clip.mediaId) : void 0;
       const rect = clip.kind === "text" ? { w: W, h: H, x: 0, y: 0 } : fitRect(media?.width || W, media?.height || H, W, H, clip);
@@ -194,7 +195,7 @@ function buildExportArgs(project, settings, textPngs) {
       const chain = [
         `scale=${rect.w}:${rect.h}`,
         clip.kind === "text" ? "format=rgba" : alphaChain(clip),
-        `setpts=PTS-STARTPTS+${f(clip.start)}/TB`,
+        `setpts=PTS-STARTPTS+${f$1(clip.start)}/TB`,
         ...transitionVideoFades(clip)
       ];
       filters.push(`[${idx}:v]${chain.join(",")}[${label}]`);
@@ -207,7 +208,7 @@ function buildExportArgs(project, settings, textPngs) {
     inputArgs.push("-i", media.path);
     audioChain(inputCount++, clip);
   }
-  filters.push(`anullsrc=r=48000:cl=stereo,atrim=0:${f(dur)}[abase]`);
+  filters.push(`anullsrc=r=48000:cl=stereo,atrim=0:${f$1(dur)}[abase]`);
   if (audioLabels.length > 0) {
     filters.push(
       `[abase]${audioLabels.map((l) => `[${l}]`).join("")}amix=inputs=${audioLabels.length + 1}:duration=first:normalize=0[aout]`
@@ -235,7 +236,7 @@ function buildExportArgs(project, settings, textPngs) {
     "-ar",
     "48000",
     "-t",
-    f(dur),
+    f$1(dur),
     "-movflags",
     "+faststart",
     "-progress",
@@ -263,7 +264,7 @@ function buildFramePipeArgs(project, settings) {
       appendAudioChain(filters, audioLabels, inputCount++, clip, transFades.get(clip.id));
     }
   }
-  filters.push(`anullsrc=r=48000:cl=stereo,atrim=0:${f(dur)}[abase]`);
+  filters.push(`anullsrc=r=48000:cl=stereo,atrim=0:${f$1(dur)}[abase]`);
   if (audioLabels.length > 0) {
     filters.push(
       `[abase]${audioLabels.map((l) => `[${l}]`).join("")}amix=inputs=${audioLabels.length + 1}:duration=first:normalize=0[aout]`
@@ -301,14 +302,18 @@ function buildFramePipeArgs(project, settings) {
     "-ar",
     "48000",
     "-t",
-    f(dur),
+    f$1(dur),
     "-movflags",
     "+faststart",
     settings.outPath
   ];
 }
 function appRoot() {
-  return electron.app.getAppPath();
+  try {
+    return electron.app.getAppPath();
+  } catch {
+    return process.cwd();
+  }
 }
 function toolsDir() {
   return path.join(appRoot(), "tools", "ffmpeg");
@@ -643,6 +648,412 @@ async function runExport(sender, project, settings, textPngs) {
     return { ok: false, error: msg };
   }
 }
+const f = (n) => (Math.round(n * 1e3) / 1e3).toString();
+async function detectSilence(path2, start, duration, noiseDb = -35, minSilence = 0.4) {
+  const r = await run(ffmpegPath(), [
+    "-ss",
+    f(start),
+    "-t",
+    f(duration),
+    "-i",
+    path2,
+    "-af",
+    `silencedetect=n=${noiseDb}dB:d=${f(minSilence)}`,
+    "-f",
+    "null",
+    "-"
+  ], 6e5);
+  const out = [];
+  let cur = null;
+  for (const line of r.stderr.split("\n")) {
+    const s = /silence_start:\s*(-?[\d.]+)/.exec(line);
+    if (s) cur = Math.max(0, parseFloat(s[1]));
+    const e = /silence_end:\s*(-?[\d.]+)/.exec(line);
+    if (e && cur !== null) {
+      out.push({ start: cur, end: Math.min(duration, parseFloat(e[1])) });
+      cur = null;
+    }
+  }
+  if (cur !== null) out.push({ start: cur, end: duration });
+  return out;
+}
+async function detectScenes(path2, start, duration, threshold = 0.3) {
+  const r = await run(ffmpegPath(), [
+    "-ss",
+    f(start),
+    "-t",
+    f(duration),
+    "-i",
+    path2,
+    "-vf",
+    `select='gt(scene,${f(threshold)})',showinfo`,
+    "-f",
+    "null",
+    "-"
+  ], 9e5);
+  const times = [];
+  for (const line of r.stderr.split("\n")) {
+    if (!line.includes("Parsed_showinfo")) continue;
+    const m = /pts_time:\s*([\d.]+)/.exec(line);
+    if (m) {
+      const t = parseFloat(m[1]);
+      if (t > 0.2 && t < duration - 0.2) times.push(t);
+    }
+  }
+  return times;
+}
+function detectBeats(path2) {
+  const SR = 22050;
+  return new Promise((resolve) => {
+    const child = child_process.spawn(
+      ffmpegPath(),
+      ["-v", "error", "-i", path2, "-ac", "1", "-ar", String(SR), "-f", "s16le", "pipe:1"],
+      { windowsHide: true }
+    );
+    const chunks = [];
+    let total = 0;
+    const MAX = SR * 2 * 60 * 12;
+    child.stdout.on("data", (d) => {
+      if (total < MAX) {
+        chunks.push(d);
+        total += d.length;
+      }
+    });
+    child.on("close", () => {
+      const pcm = Buffer.concat(chunks);
+      const n = Math.floor(pcm.length / 2);
+      const hop = 512;
+      const frames = Math.floor(n / hop) - 1;
+      if (frames < 8) return resolve({ beats: [], bpm: 0 });
+      const energy = new Float64Array(frames);
+      for (let i = 0; i < frames; i++) {
+        let e = 0;
+        const base = i * hop;
+        for (let j = 0; j < hop; j++) {
+          const v = pcm.readInt16LE((base + j) * 2) / 32768;
+          e += v * v;
+        }
+        energy[i] = e;
+      }
+      const flux = new Float64Array(frames);
+      for (let i = 1; i < frames; i++) flux[i] = Math.max(0, energy[i] - energy[i - 1]);
+      const w = Math.round(SR / hop);
+      const beats = [];
+      let last = -1;
+      for (let i = 2; i < frames - 2; i++) {
+        let sum = 0;
+        let cnt = 0;
+        for (let j = Math.max(0, i - w); j < Math.min(frames, i + w); j++) {
+          sum += flux[j];
+          cnt++;
+        }
+        const thr = sum / cnt * 2.2 + 1e-9;
+        const isPeak = flux[i] > thr && flux[i] >= flux[i - 1] && flux[i] >= flux[i + 1];
+        const t = i * hop / SR;
+        if (isPeak && (last < 0 || t - last > 0.22)) {
+          beats.push(Math.round(t * 1e3) / 1e3);
+          last = t;
+        }
+      }
+      let bpm = 0;
+      if (beats.length > 3) {
+        const iois = beats.slice(1).map((b, i) => b - beats[i]).sort((a, b) => a - b);
+        let ioi = iois[Math.floor(iois.length / 2)];
+        while (ioi < 0.3) ioi *= 2;
+        while (ioi > 1.2) ioi /= 2;
+        bpm = Math.round(60 / ioi);
+      }
+      resolve({ beats, bpm });
+    });
+    child.on("error", () => resolve({ beats: [], bpm: 0 }));
+  });
+}
+function whisperExe() {
+  const dir = path.join(appRoot(), "tools", "whisper");
+  for (const name of ["whisper-cli.exe", "main.exe"]) {
+    const p = path.join(dir, name);
+    if (fs.existsSync(p)) return p;
+  }
+  for (const sub of ["bin", "Release"]) {
+    for (const name of ["whisper-cli.exe", "main.exe"]) {
+      const p = path.join(dir, sub, name);
+      if (fs.existsSync(p)) return p;
+    }
+  }
+  return null;
+}
+function whisperModel() {
+  const p = path.join(appRoot(), "tools", "models", "ggml-base-q5_1.bin");
+  return fs.existsSync(p) ? p : null;
+}
+function whisperAvailable() {
+  return !!whisperExe() && !!whisperModel();
+}
+function modnetAvailable() {
+  return fs.existsSync(path.join(appRoot(), "tools", "models", "modnet.onnx"));
+}
+async function transcribe(path$1, start, duration, lang = "auto") {
+  const exe = whisperExe();
+  const model = whisperModel();
+  if (!exe || !model) return { ok: false, words: [], error: "whisper model not installed" };
+  const dir = path.join(cacheDir(), "tools");
+  await fs.promises.mkdir(dir, { recursive: true });
+  const stamp = Date.now().toString(36);
+  const wav = path.join(dir, `tr-${stamp}.wav`);
+  const outBase = path.join(dir, `tr-${stamp}`);
+  const ex = await run(ffmpegPath(), [
+    "-y",
+    "-ss",
+    f(start),
+    "-t",
+    f(duration),
+    "-i",
+    path$1,
+    "-vn",
+    "-ar",
+    "16000",
+    "-ac",
+    "1",
+    "-c:a",
+    "pcm_s16le",
+    wav
+  ], 6e5);
+  if (ex.code !== 0) return { ok: false, words: [], error: "audio extract failed" };
+  const threads = Math.max(2, Math.min(6, os.cpus().length - 2));
+  const args = [
+    "-m",
+    model,
+    "-f",
+    wav,
+    "-oj",
+    "-of",
+    outBase,
+    "-ml",
+    "1",
+    "-sow",
+    "-t",
+    String(threads)
+  ];
+  if (lang && lang !== "auto") args.push("-l", lang);
+  else args.push("-l", "auto");
+  const w = await run(exe, args, 18e5);
+  await fs.promises.unlink(wav).catch(() => {
+  });
+  if (w.code !== 0) {
+    return { ok: false, words: [], error: "whisper failed: " + w.stderr.split("\n").slice(-4).join(" ") };
+  }
+  try {
+    const raw = await fs.promises.readFile(outBase + ".json", "utf8");
+    await fs.promises.unlink(outBase + ".json").catch(() => {
+    });
+    const j = JSON.parse(raw);
+    const words = [];
+    for (const seg of j.transcription || []) {
+      const text = String(seg.text || "").trim();
+      if (!text || /^[\s.,!?;:—-]+$/.test(text)) continue;
+      const t0 = (seg.offsets?.from ?? 0) / 1e3;
+      const t1 = Math.max(t0 + 0.05, (seg.offsets?.to ?? 0) / 1e3);
+      words.push({ t0, t1, text });
+    }
+    return { ok: true, words };
+  } catch (e) {
+    return { ok: false, words: [], error: "could not parse whisper output: " + String(e) };
+  }
+}
+function loadOrt() {
+  try {
+    return require("onnxruntime-node");
+  } catch {
+    return null;
+  }
+}
+const MODEL_W = 512;
+const MODEL_H = 288;
+function modelPath() {
+  return path.join(appRoot(), "tools", "models", "modnet.onnx");
+}
+function frameReader(child, frameSize) {
+  const bufs = [];
+  let total = 0;
+  let ended = false;
+  let waiter = null;
+  const stream2 = child.stdout;
+  stream2.on("data", (d) => {
+    bufs.push(d);
+    total += d.length;
+    waiter?.();
+  });
+  const onEnd = () => {
+    ended = true;
+    waiter?.();
+  };
+  stream2.on("end", onEnd);
+  child.on("close", onEnd);
+  return async () => {
+    while (total < frameSize) {
+      if (ended) return null;
+      await new Promise((r) => {
+        waiter = r;
+      });
+      waiter = null;
+    }
+    const all = Buffer.concat(bufs);
+    bufs.length = 0;
+    const frame = Buffer.from(all.subarray(0, frameSize));
+    const rest = all.subarray(frameSize);
+    if (rest.length > 0) bufs.push(Buffer.from(rest));
+    total = rest.length;
+    return frame;
+  };
+}
+function writeWithDrain(child, buf) {
+  const stdin = child.stdin;
+  if (!stdin || stdin.destroyed) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const ok = stdin.write(buf, (err) => {
+      if (err) resolve(false);
+    });
+    if (ok) resolve(true);
+    else stdin.once("drain", () => resolve(true));
+  });
+}
+async function removeBackground(sender, path$1, mediaId, duration) {
+  const ort = loadOrt();
+  if (!ort) return { ok: false, error: "onnxruntime-node is not installed" };
+  if (!fs.existsSync(modelPath())) return { ok: false, error: "MODNet model missing (tools/models/modnet.onnx)" };
+  if (duration > 900) return { ok: false, error: "clip longer than 15 min — trim it first" };
+  const probe = await probeMedia(path$1, "probe");
+  if (!probe) return { ok: false, error: "could not probe source" };
+  const srcW = probe.width || 1280;
+  const srcH = probe.height || 720;
+  const fps = probe.fps && probe.fps > 0 && probe.fps <= 60 ? probe.fps : 30;
+  const scale = Math.min(1, 720 / srcH);
+  const W = 2 * Math.round(srcW * scale / 2);
+  const H = 2 * Math.round(srcH * scale / 2);
+  const outDir = path.join(cacheDir(), "mattes");
+  await fs.promises.mkdir(outDir, { recursive: true });
+  const mattePath = path.join(outDir, `${mediaId}.webm`);
+  const session = await ort.InferenceSession.create(modelPath());
+  const inputName = session.inputNames[0];
+  const outputName = session.outputNames[0];
+  const decoder = child_process.spawn(
+    ffmpegPath(),
+    ["-v", "error", "-i", path$1, "-vf", `scale=${W}:${H},fps=${fps}`, "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"],
+    { windowsHide: true }
+  );
+  const encoder = child_process.spawn(
+    ffmpegPath(),
+    [
+      "-y",
+      "-v",
+      "error",
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "rgba",
+      "-video_size",
+      `${W}x${H}`,
+      "-framerate",
+      String(fps),
+      "-i",
+      "pipe:0",
+      "-i",
+      path$1,
+      "-map",
+      "0:v",
+      "-map",
+      "1:a?",
+      "-c:v",
+      "libvpx-vp9",
+      "-pix_fmt",
+      "yuva420p",
+      "-crf",
+      "34",
+      "-b:v",
+      "0",
+      "-deadline",
+      "realtime",
+      "-cpu-used",
+      "6",
+      "-row-mt",
+      "1",
+      "-c:a",
+      "libopus",
+      "-b:a",
+      "128k",
+      "-shortest",
+      mattePath
+    ],
+    { windowsHide: true }
+  );
+  let encLog = "";
+  encoder.stderr.on("data", (d) => {
+    encLog += d.toString();
+    if (encLog.length > 2e4) encLog = encLog.slice(-1e4);
+  });
+  encoder.stdin.on("error", () => {
+  });
+  const encClosed = new Promise((r) => encoder.on("close", r));
+  const nextFrame = frameReader(decoder, W * H * 3);
+  const tensorData = new Float32Array(3 * MODEL_H * MODEL_W);
+  const rgba = Buffer.alloc(W * H * 4);
+  const totalFrames = Math.max(1, Math.round(duration * fps));
+  let frames = 0;
+  for (; ; ) {
+    const frame = await nextFrame();
+    if (!frame) break;
+    for (let y = 0; y < MODEL_H; y++) {
+      const sy = Math.min(H - 1, Math.round(y * H / MODEL_H));
+      for (let x = 0; x < MODEL_W; x++) {
+        const sx = Math.min(W - 1, Math.round(x * W / MODEL_W));
+        const si = (sy * W + sx) * 3;
+        const di = y * MODEL_W + x;
+        tensorData[di] = frame[si] / 127.5 - 1;
+        tensorData[MODEL_H * MODEL_W + di] = frame[si + 1] / 127.5 - 1;
+        tensorData[2 * MODEL_H * MODEL_W + di] = frame[si + 2] / 127.5 - 1;
+      }
+    }
+    const feeds = {};
+    feeds[inputName] = new ort.Tensor("float32", tensorData, [1, 3, MODEL_H, MODEL_W]);
+    const results = await session.run(feeds);
+    const matte = results[outputName].data;
+    for (let y = 0; y < H; y++) {
+      const fy = y * (MODEL_H - 1) / (H - 1);
+      const y0 = Math.floor(fy);
+      const y1 = Math.min(MODEL_H - 1, y0 + 1);
+      const wy = fy - y0;
+      for (let x = 0; x < W; x++) {
+        const fx = x * (MODEL_W - 1) / (W - 1);
+        const x0 = Math.floor(fx);
+        const x1 = Math.min(MODEL_W - 1, x0 + 1);
+        const wx = fx - x0;
+        const m = matte[y0 * MODEL_W + x0] * (1 - wx) * (1 - wy) + matte[y0 * MODEL_W + x1] * wx * (1 - wy) + matte[y1 * MODEL_W + x0] * (1 - wx) * wy + matte[y1 * MODEL_W + x1] * wx * wy;
+        const si = (y * W + x) * 3;
+        const di = (y * W + x) * 4;
+        rgba[di] = frame[si];
+        rgba[di + 1] = frame[si + 1];
+        rgba[di + 2] = frame[si + 2];
+        rgba[di + 3] = Math.max(0, Math.min(255, Math.round(m * 255)));
+      }
+    }
+    const ok = await writeWithDrain(encoder, rgba);
+    if (!ok) break;
+    frames++;
+    if (frames % 5 === 0) {
+      sender.send("bgremove:progress", { mediaId, ratio: Math.min(0.99, frames / totalFrames) });
+    }
+  }
+  decoder.kill("SIGKILL");
+  encoder.stdin.end();
+  const code = await encClosed;
+  if (code !== 0 || frames === 0) {
+    await fs.promises.unlink(mattePath).catch(() => {
+    });
+    return { ok: false, error: "matte encode failed: " + encLog.split("\n").slice(-5).join(" ") };
+  }
+  sender.send("bgremove:progress", { mediaId, ratio: 1 });
+  return { ok: true, mattePath };
+}
 const SMOKE = !!process.env.LOCALCUT_SMOKE;
 electron.protocol.registerSchemesAsPrivileged([
   {
@@ -898,9 +1309,28 @@ function registerIpc() {
     return {
       ffmpegFound: !!version,
       qsv: version ? await detectQsv() : false,
-      ffmpegVersion: version
+      ffmpegVersion: version,
+      whisper: whisperAvailable(),
+      modnet: modnetAvailable()
     };
   });
+  electron.ipcMain.handle(
+    "tool:silence",
+    (_e, path2, start, dur) => detectSilence(path2, start, dur)
+  );
+  electron.ipcMain.handle(
+    "tool:scenes",
+    (_e, path2, start, dur, thr) => detectScenes(path2, start, dur, thr)
+  );
+  electron.ipcMain.handle("tool:beats", (_e, path2) => detectBeats(path2));
+  electron.ipcMain.handle(
+    "tool:transcribe",
+    (_e, path2, start, dur, lang) => transcribe(path2, start, dur, lang)
+  );
+  electron.ipcMain.handle(
+    "tool:remove-bg",
+    (e, path2, mediaId, duration) => removeBackground(e.sender, path2, mediaId, duration)
+  );
   electron.ipcMain.handle("shell:show-item", (_e, path2) => electron.shell.showItemInFolder(path2));
 }
 function createWindow() {
@@ -913,6 +1343,7 @@ function createWindow() {
     show: false,
     autoHideMenuBar: true,
     title: "LocalCut",
+    icon: path.join(appRoot(), "assets", "localcut.ico"),
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -960,6 +1391,7 @@ function createWindow() {
     }, 15e4);
   }
 }
+electron.app.setAppUserModelId("com.localcut.app");
 electron.app.whenReady().then(async () => {
   await ensureDataDirs();
   registerMediaProtocol();

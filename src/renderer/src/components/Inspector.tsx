@@ -1,5 +1,13 @@
-import type { Clip, ColorAdjust, Mask, TextStyle, TransitionType } from '@shared/model'
-import { MAIN_TRACK_ID, defaultChromaKey, defaultColor, defaultMask } from '@shared/model'
+import { useEffect, useState } from 'react'
+import type { Clip, ColorAdjust, KfProp, Mask, TextStyle, TransitionType } from '@shared/model'
+import {
+  MAIN_TRACK_ID,
+  defaultChromaKey,
+  defaultColor,
+  defaultMask,
+  hasKeyframes
+} from '@shared/model'
+import { api } from '../api'
 import { FILTER_PRESETS, FONT_FAMILIES } from '../lib'
 import { findClip, useEditor } from '../store'
 
@@ -10,7 +18,9 @@ function Slider({
   max,
   step,
   onChange,
-  onCommitStart
+  onCommitStart,
+  onKeyframe,
+  hasKf
 }: {
   label: string
   value: number
@@ -19,6 +29,8 @@ function Slider({
   step: number
   onChange: (v: number) => void
   onCommitStart: () => void
+  onKeyframe?: () => void
+  hasKf?: boolean
 }): React.JSX.Element {
   return (
     <label className="insp-row">
@@ -33,6 +45,18 @@ function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
       />
       <span className="insp-value">{value.toFixed(2)}</span>
+      {onKeyframe && (
+        <button
+          className={`btn kf ${hasKf ? 'active' : ''}`}
+          title="Add keyframe at playhead"
+          onClick={(e) => {
+            e.preventDefault()
+            onKeyframe()
+          }}
+        >
+          ◆
+        </button>
+      )}
     </label>
   )
 }
@@ -212,15 +236,10 @@ export function Inspector(): React.JSX.Element {
         )}
 
         {clip.kind !== 'audio' && clip.kind !== 'adjust' && (
-          <>
-            <div className="insp-section">Transform</div>
-            <Slider label="X" value={t.x} min={-0.5} max={0.5} step={0.005} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ x: v })} />
-            <Slider label="Y" value={t.y} min={-0.5} max={0.5} step={0.005} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ y: v })} />
-            <Slider label="Scale" value={t.scale} min={0.05} max={3} step={0.01} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ scale: v })} />
-            <Slider label="Rotation" value={t.rotation} min={-180} max={180} step={1} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ rotation: v })} />
-            <Slider label="Opacity" value={t.opacity} min={0} max={1} step={0.01} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ opacity: v })} />
-          </>
+          <TransformSection clip={clip} />
         )}
+
+        {clip.kind === 'video' && <AiToolsSection clip={clip} />}
 
         {clip.kind === 'adjust' && (
           <>
@@ -314,6 +333,196 @@ export function Inspector(): React.JSX.Element {
         )}
       </div>
     </div>
+  )
+}
+
+function TransformSection({ clip }: { clip: Clip }): React.JSX.Element {
+  const updateClip = useEditor((s) => s.updateClip)
+  const beginInteraction = useEditor((s) => s.beginInteraction)
+  const setKeyframe = useEditor((s) => s.setKeyframe)
+  const clearKeyframes = useEditor((s) => s.clearKeyframes)
+  const playhead = useEditor((s) => s.playhead)
+  const t = clip.transform
+  const anyKf = hasKeyframes(clip)
+
+  // when a property is keyframed, slider edits write a keyframe at the playhead
+  const change = (prop: KfProp, v: number): void => {
+    if (clip.keyframes?.[prop]?.length) {
+      setKeyframe(clip.id, prop, playhead - clip.start, v)
+    } else {
+      updateClip(clip.id, { transform: { ...t, [prop]: v } }, false)
+    }
+  }
+  const addKf = (prop: KfProp, v: number): void => {
+    beginInteraction()
+    setKeyframe(clip.id, prop, playhead - clip.start, v)
+  }
+  const kfProps: { prop: KfProp; label: string; min: number; max: number; step: number }[] = [
+    { prop: 'x', label: 'X', min: -0.5, max: 0.5, step: 0.005 },
+    { prop: 'y', label: 'Y', min: -0.5, max: 0.5, step: 0.005 },
+    { prop: 'scale', label: 'Scale', min: 0.05, max: 3, step: 0.01 },
+    { prop: 'rotation', label: 'Rotation', min: -180, max: 180, step: 1 },
+    { prop: 'opacity', label: 'Opacity', min: 0, max: 1, step: 0.01 }
+  ]
+
+  return (
+    <>
+      <div className="insp-section">Transform</div>
+      {kfProps.map(({ prop, label, min, max, step }) => (
+        <Slider
+          key={prop}
+          label={label}
+          value={t[prop]}
+          min={min}
+          max={max}
+          step={step}
+          onCommitStart={beginInteraction}
+          onChange={(v) => change(prop, v)}
+          onKeyframe={() => addKf(prop, t[prop])}
+          hasKf={!!clip.keyframes?.[prop]?.length}
+        />
+      ))}
+      {anyKf && (
+        <div className="insp-row">
+          <span className="insp-label" />
+          <button className="btn small" onClick={() => clearKeyframes(clip.id)}>
+            Clear all keyframes
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+function AiToolsSection({ clip }: { clip: Clip }): React.JSX.Element {
+  const project = useEditor((s) => s.project)
+  const sys = useEditor((s) => s.sys)
+  const updateClip = useEditor((s) => s.updateClip)
+  const replaceClipWithSegments = useEditor((s) => s.replaceClipWithSegments)
+  const addCaptionClips = useEditor((s) => s.addCaptionClips)
+  const setMediaMatte = useEditor((s) => s.setMediaMatte)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [msg, setMsg] = useState('')
+  const [bgRatio, setBgRatio] = useState(0)
+
+  const media = clip.mediaId ? project.media.find((m) => m.id === clip.mediaId) : undefined
+  useEffect(
+    () =>
+      api.on('bgremove:progress', (p) => {
+        const { mediaId, ratio } = p as { mediaId: string; ratio: number }
+        if (mediaId === media?.id) setBgRatio(ratio)
+      }),
+    [media?.id]
+  )
+  if (!media) return <></>
+
+  const speed = clip.speed || 1
+  const srcStart = clip.in
+  const srcDur = clip.duration * speed
+  const guard = async (name: string, fn: () => Promise<string>): Promise<void> => {
+    if (busy) return
+    setBusy(name)
+    setMsg('')
+    try {
+      setMsg(await fn())
+    } catch (e) {
+      setMsg(String(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const silenceCut = (): Promise<void> =>
+    guard('silence', async () => {
+      const sil = await api.toolSilence(media.path, srcStart, srcDur)
+      if (sil.length === 0) return 'No silence found.'
+      const PAD = 0.075
+      const keep: { in: number; duration: number }[] = []
+      let pos = 0
+      for (const r of sil) {
+        const end = Math.min(r.start + PAD, srcDur)
+        if (end - pos > 0.25) keep.push({ in: srcStart + pos, duration: end - pos })
+        pos = Math.max(pos, r.end - PAD)
+      }
+      if (srcDur - pos > 0.25) keep.push({ in: srcStart + pos, duration: srcDur - pos })
+      if (keep.length === 0) return 'Clip is entirely silent.'
+      replaceClipWithSegments(clip.id, keep)
+      const removed = srcDur - keep.reduce((a, k) => a + k.duration, 0)
+      return `Removed ${removed.toFixed(1)}s of silence (${keep.length} segments).`
+    })
+
+  const sceneCut = (): Promise<void> =>
+    guard('scenes', async () => {
+      const bounds = await api.toolScenes(media.path, srcStart, srcDur, 0.3)
+      if (bounds.length === 0) return 'No scene changes found.'
+      const cuts = [0, ...bounds, srcDur]
+      const segs: { in: number; duration: number }[] = []
+      for (let i = 0; i < cuts.length - 1; i++) {
+        const d = cuts[i + 1] - cuts[i]
+        if (d > 0.15) segs.push({ in: srcStart + cuts[i], duration: d })
+      }
+      replaceClipWithSegments(clip.id, segs)
+      return `Split into ${segs.length} scenes.`
+    })
+
+  const captions = (): Promise<void> =>
+    guard('captions', async () => {
+      const r = await api.toolTranscribe(media.path, srcStart, srcDur)
+      if (!r.ok) return r.error || 'transcription failed'
+      if (r.words.length === 0) return 'No speech detected.'
+      addCaptionClips(clip.id, r.words, project.height > project.width)
+      return `Added captions (${r.words.length} words).`
+    })
+
+  const removeBg = (): Promise<void> =>
+    guard('bg', async () => {
+      if (media.mattePath) {
+        updateClip(clip.id, { bgRemoved: !clip.bgRemoved })
+        return clip.bgRemoved ? 'Background restored.' : 'Background removed.'
+      }
+      setBgRatio(0)
+      const r = await api.toolRemoveBg(media.path, media.id, media.duration)
+      if (!r.ok || !r.mattePath) return r.error || 'background removal failed'
+      setMediaMatte(media.id, r.mattePath)
+      updateClip(clip.id, { bgRemoved: true })
+      return 'Background removed.'
+    })
+
+  return (
+    <>
+      <div className="insp-section">AI tools</div>
+      <div className="insp-row">
+        <div className="btn-group wrap">
+          <button className="btn small" disabled={!!busy} onClick={silenceCut}>
+            {busy === 'silence' ? 'Analyzing…' : '✂ Silence cut'}
+          </button>
+          <button className="btn small" disabled={!!busy} onClick={sceneCut}>
+            {busy === 'scenes' ? 'Analyzing…' : '🎬 Scene cut'}
+          </button>
+          <button
+            className="btn small"
+            disabled={!!busy || !sys?.whisper}
+            title={sys?.whisper ? 'Word-accurate auto captions' : 'Whisper model not installed'}
+            onClick={captions}
+          >
+            {busy === 'captions' ? 'Transcribing…' : '💬 Auto captions'}
+          </button>
+          <button
+            className="btn small"
+            disabled={!!busy || (!sys?.modnet && !media.mattePath)}
+            title={sys?.modnet || media.mattePath ? 'AI portrait matting (offline pass)' : 'MODNet model not installed'}
+            onClick={removeBg}
+          >
+            {busy === 'bg'
+              ? `Matting… ${Math.round(bgRatio * 100)}%`
+              : clip.bgRemoved
+                ? '👤 Restore BG'
+                : '👤 Remove BG'}
+          </button>
+        </div>
+      </div>
+      {msg && <div className="tool-msg">{msg}</div>}
+    </>
   )
 }
 

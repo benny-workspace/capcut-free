@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Clip, MediaItem, Project, SysInfo, Track } from '@shared/model'
+import type { Clip, KfProp, MediaItem, Project, SysInfo, Track, WordStamp } from '@shared/model'
 import {
   MAIN_TRACK_ID,
   defaultColor,
@@ -9,7 +9,7 @@ import {
   projectDuration,
   transitionOverlap
 } from '@shared/model'
-import { clamp } from './lib'
+import { captionClipsFromWords, clamp } from './lib'
 
 let idSeq = 0
 export const uid = (p: string): string => p + Date.now().toString(36) + (idSeq++).toString(36)
@@ -74,6 +74,14 @@ export interface EditorState {
   addTextClip: () => void
   addAdjustClip: () => void
   updateClip: (clipId: string, patch: Partial<Clip>, withUndo?: boolean) => void
+  /** replace a clip with sub-clips at the given source ranges (seconds) */
+  replaceClipWithSegments: (clipId: string, segments: { in: number; duration: number }[]) => void
+  /** create styled caption clips on the text track from word timestamps */
+  addCaptionClips: (sourceClipId: string, words: WordStamp[], big: boolean) => void
+  setMediaMatte: (mediaId: string, mattePath: string) => void
+  setKeyframe: (clipId: string, prop: KfProp, tLocal: number, v: number) => void
+  clearKeyframes: (clipId: string) => void
+  replaceTimeline: (tracks: Track[], media?: MediaItem[]) => void
   reorderMain: (clipId: string, newIndex: number) => void
   moveToTrack: (clipId: string, trackId: string, start: number, mainIndex?: number) => void
   beginInteraction: () => void
@@ -330,6 +338,114 @@ export const useEditor = create<EditorState>((set, get) => ({
       }
       return { project, saveState: 'dirty' }
     }),
+
+  replaceClipWithSegments: (clipId, segments) =>
+    set((s) => {
+      const loc = findClip(s.project, clipId)
+      if (!loc || segments.length === 0) return {}
+      const speed = loc.clip.speed || 1
+      let t = loc.clip.start
+      const subs: Clip[] = segments.map((seg) => {
+        const dur = seg.duration / speed
+        const c: Clip = {
+          ...loc.clip,
+          id: uid('c'),
+          in: seg.in,
+          start: t,
+          duration: dur,
+          transitionAfter: undefined
+        }
+        t += dur
+        return c
+      })
+      const clips = [...loc.track.clips]
+      clips.splice(loc.index, 1, ...subs)
+      let project = replaceTrackClips(s.project, loc.track.id, clips)
+      if (loc.track.id === MAIN_TRACK_ID) project = packedMain(project)
+      return {
+        project,
+        selectedClipId: subs[0].id,
+        undoStack: pushUndo(s),
+        redoStack: [],
+        saveState: 'dirty'
+      }
+    }),
+
+  addCaptionClips: (sourceClipId, words, big) =>
+    set((s) => {
+      const loc = findClip(s.project, sourceClipId)
+      const track = s.project.tracks.find((t) => t.kind === 'text')
+      if (!loc || !track || words.length === 0) return {}
+      const speed = loc.clip.speed || 1
+      // words are relative to the analyzed source range; map to timeline time
+      const absolute: WordStamp[] = words.map((w) => ({
+        text: w.text,
+        t0: loc.clip.start + w.t0 / speed,
+        t1: loc.clip.start + w.t1 / speed
+      }))
+      const clips = captionClipsFromWords(absolute, big, () => uid('c'))
+      return {
+        project: replaceTrackClips(s.project, track.id, [...track.clips, ...clips]),
+        undoStack: pushUndo(s),
+        redoStack: [],
+        saveState: 'dirty'
+      }
+    }),
+
+  setMediaMatte: (mediaId, mattePath) =>
+    set((s) => ({
+      project: {
+        ...s.project,
+        media: s.project.media.map((m) => (m.id === mediaId ? { ...m, mattePath } : m))
+      },
+      saveState: 'dirty'
+    })),
+
+  setKeyframe: (clipId, prop, tLocal, v) =>
+    set((s) => {
+      const loc = findClip(s.project, clipId)
+      if (!loc) return {}
+      const t = clamp(tLocal, 0, loc.clip.duration)
+      const kf = { ...(loc.clip.keyframes ?? {}) }
+      const list = [...(kf[prop] ?? [])].filter((k) => Math.abs(k.t - t) > 0.04)
+      list.push({ t, v })
+      list.sort((a, b) => a.t - b.t)
+      kf[prop] = list
+      const clips = loc.track.clips.map((c) => (c.id === clipId ? { ...c, keyframes: kf } : c))
+      return {
+        project: replaceTrackClips(s.project, loc.track.id, clips),
+        saveState: 'dirty'
+      }
+    }),
+
+  clearKeyframes: (clipId) =>
+    set((s) => {
+      const loc = findClip(s.project, clipId)
+      if (!loc) return {}
+      const clips = loc.track.clips.map((c) =>
+        c.id === clipId ? { ...c, keyframes: undefined } : c
+      )
+      return {
+        project: replaceTrackClips(s.project, loc.track.id, clips),
+        undoStack: pushUndo(s),
+        redoStack: [],
+        saveState: 'dirty'
+      }
+    }),
+
+  replaceTimeline: (tracks, media) =>
+    set((s) => ({
+      project: {
+        ...s.project,
+        tracks,
+        media: media ?? s.project.media
+      },
+      selectedClipId: null,
+      playhead: 0,
+      undoStack: pushUndo(s),
+      redoStack: [],
+      saveState: 'dirty'
+    })),
 
   beginInteraction: () =>
     set((s) => ({ undoStack: pushUndo(s), redoStack: [] })),
