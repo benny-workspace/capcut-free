@@ -79,6 +79,8 @@ export interface EditorState {
   /** create styled caption clips on the text track from word timestamps */
   addCaptionClips: (sourceClipId: string, words: WordStamp[], big: boolean) => void
   setMediaMatte: (mediaId: string, mattePath: string) => void
+  /** copy one caption clip's style + placement onto every caption clip */
+  applyStyleToAllCaptions: (fromClipId: string) => void
   setKeyframe: (clipId: string, prop: KfProp, tLocal: number, v: number) => void
   clearKeyframes: (clipId: string) => void
   replaceTimeline: (tracks: Track[], media?: MediaItem[]) => void
@@ -400,6 +402,32 @@ export const useEditor = create<EditorState>((set, get) => ({
       },
       saveState: 'dirty'
     })),
+
+  applyStyleToAllCaptions: (fromClipId) =>
+    set((s) => {
+      const loc = findClip(s.project, fromClipId)
+      if (!loc?.clip.textStyle) return {}
+      const style = loc.clip.textStyle
+      const tf = loc.clip.transform
+      const tracks = s.project.tracks.map((t) =>
+        t.kind === 'text'
+          ? {
+              ...t,
+              clips: t.clips.map((c) =>
+                c.words && c.id !== fromClipId
+                  ? { ...c, textStyle: { ...style }, transform: { ...tf } }
+                  : c
+              )
+            }
+          : t
+      )
+      return {
+        project: { ...s.project, tracks },
+        undoStack: pushUndo(s),
+        redoStack: [],
+        saveState: 'dirty'
+      }
+    }),
 
   setKeyframe: (clipId, prop, tLocal, v) =>
     set((s) => {

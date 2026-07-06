@@ -1,4 +1,4 @@
-import { u as useEditor, a as api, d as defaultChromaKey, r as runFramePipeExport } from "./index-BEHm5lSz.js";
+import { u as useEditor, a as api, n as newProject, d as defaultChromaKey, r as runFramePipeExport } from "./index-CACXNEvX.js";
 const log = (m) => console.warn("[smoke] " + m);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function runSmoke() {
@@ -6,7 +6,7 @@ async function runSmoke() {
     const st = useEditor.getState;
     const assets = await api.smokeSetup();
     log("assets ready");
-    st().setProjectMeta({ name: "smoke", width: 1280, height: 720 });
+    st().init(newProject("smoke", 1280, 720));
     const items = await api.ingest([assets.basePath, assets.greenPath]);
     st().addMedia(items);
     const base = items.find((i) => i.path === assets.basePath);

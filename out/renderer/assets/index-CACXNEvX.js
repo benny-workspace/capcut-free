@@ -13186,6 +13186,26 @@ const useEditor = create((set, get) => ({
     },
     saveState: "dirty"
   })),
+  applyStyleToAllCaptions: (fromClipId) => set((s) => {
+    const loc = findClip(s.project, fromClipId);
+    if (!loc?.clip.textStyle) return {};
+    const style = loc.clip.textStyle;
+    const tf = loc.clip.transform;
+    const tracks = s.project.tracks.map(
+      (t) => t.kind === "text" ? {
+        ...t,
+        clips: t.clips.map(
+          (c) => c.words && c.id !== fromClipId ? { ...c, textStyle: { ...style }, transform: { ...tf } } : c
+        )
+      } : t
+    );
+    return {
+      project: { ...s.project, tracks },
+      undoStack: pushUndo(s),
+      redoStack: [],
+      saveState: "dirty"
+    };
+  }),
   setKeyframe: (clipId, prop, tLocal, v) => set((s) => {
     const loc = findClip(s.project, clipId);
     if (!loc) return {};
@@ -14284,6 +14304,9 @@ function Slider({
   onKeyframe,
   hasKf
 }) {
+  const [draft, setDraft] = reactExports.useState(null);
+  const decimals = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+  const clampV = (v) => Math.min(max, Math.max(min, v));
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "insp-row", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "insp-label", children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -14298,7 +14321,31 @@ function Slider({
         onChange: (e) => onChange(Number(e.target.value))
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "insp-value", children: value.toFixed(2) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: "num-input",
+        type: "number",
+        min,
+        max,
+        step,
+        value: draft ?? value.toFixed(decimals),
+        onFocus: (e) => {
+          onCommitStart();
+          setDraft(value.toFixed(decimals));
+          e.target.select();
+        },
+        onChange: (e) => {
+          setDraft(e.target.value);
+          const v = parseFloat(e.target.value);
+          if (isFinite(v)) onChange(clampV(v));
+        },
+        onBlur: () => setDraft(null),
+        onKeyDown: (e) => {
+          if (e.key === "Enter") e.target.blur();
+        }
+      }
+    ),
     onKeyframe && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
@@ -14368,6 +14415,7 @@ function Inspector() {
   const updateClip = useEditor((s) => s.updateClip);
   const beginInteraction = useEditor((s) => s.beginInteraction);
   const deleteClip = useEditor((s) => s.deleteClip);
+  const applyStyleToAllCaptions = useEditor((s) => s.applyStyleToAllCaptions);
   const loc = selectedClipId ? findClip(project, selectedClipId) : null;
   if (!loc) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inspector", children: [
@@ -14475,6 +14523,18 @@ function Inspector() {
               }
             )
           ] })
+        ] }),
+        clip.words && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "insp-row", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "insp-label" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              className: "btn small primary",
+              title: "Copy this caption's font, colors and position onto every auto caption",
+              onClick: () => applyStyleToAllCaptions(clip.id),
+              children: "Apply to all captions"
+            }
+          )
         ] })
       ] }),
       clip.kind !== "audio" && clip.kind !== "adjust" && /* @__PURE__ */ jsxRuntimeExports.jsx(TransformSection, { clip }),
@@ -15139,6 +15199,7 @@ function Preview() {
   ] });
 }
 const trackHeight = (kind) => kind === "video" ? 56 : kind === "overlay" ? 44 : 32;
+const trackIcon = (kind) => kind === "video" ? "🎬" : kind === "overlay" ? "▦" : kind === "text" ? "𝐓" : "♪";
 function trackAccepts(track, clip) {
   if (clip.kind === "text") return track.kind === "text";
   if (clip.kind === "audio") return track.kind === "audio";
@@ -15392,12 +15453,15 @@ function Timeline() {
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tl-body", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tl-labels", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "tl-ruler-corner" }),
-        project.tracks.map((track) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        project.tracks.map((track) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
             className: "tl-label",
             style: { height: trackHeight(track.kind) },
-            children: track.name
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "tl-label-icon", children: trackIcon(track.kind) }),
+              track.name
+            ]
           },
           track.id
         ))
@@ -15545,7 +15609,7 @@ async function boot() {
   window.__editor = useEditor;
   if (hasApi && new URLSearchParams(location.search).has("smoke")) {
     const { runSmoke } = await __vitePreload(async () => {
-      const { runSmoke: runSmoke2 } = await import("./smoke-B-Am0WEm.js");
+      const { runSmoke: runSmoke2 } = await import("./smoke-C9MQT-O-.js");
       return { runSmoke: runSmoke2 };
     }, true ? [] : void 0, import.meta.url);
     void runSmoke();
@@ -15555,6 +15619,7 @@ void boot();
 export {
   api as a,
   defaultChromaKey as d,
+  newProject as n,
   runFramePipeExport as r,
   useEditor as u
 };

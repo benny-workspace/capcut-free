@@ -5,7 +5,7 @@
 // the main process picks it up, verifies the file, and exits.
 
 import type { MediaItem } from '@shared/model'
-import { defaultChromaKey } from '@shared/model'
+import { defaultChromaKey, newProject } from '@shared/model'
 import { api } from './api'
 import { runFramePipeExport } from './exportFramePipe'
 import { useEditor } from './store'
@@ -19,7 +19,9 @@ export async function runSmoke(): Promise<void> {
     const assets = await api.smokeSetup()
     log('assets ready')
 
-    st().setProjectMeta({ name: 'smoke', width: 1280, height: 720 })
+    // deterministic: start from a clean in-memory project (saves are no-ops
+    // in smoke mode, so the user's autosaved project on disk is untouched)
+    st().init(newProject('smoke', 1280, 720))
     const items = (await api.ingest([assets.basePath, assets.greenPath])) as MediaItem[]
     st().addMedia(items)
     const base = items.find((i) => i.path === assets.basePath)

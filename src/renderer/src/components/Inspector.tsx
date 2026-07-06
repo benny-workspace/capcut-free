@@ -32,6 +32,10 @@ function Slider({
   onKeyframe?: () => void
   hasKf?: boolean
 }): React.JSX.Element {
+  // the number is directly editable: click, type, Enter/blur to commit
+  const [draft, setDraft] = useState<string | null>(null)
+  const decimals = step >= 1 ? 0 : step >= 0.1 ? 1 : 2
+  const clampV = (v: number): number => Math.min(max, Math.max(min, v))
   return (
     <label className="insp-row">
       <span className="insp-label">{label}</span>
@@ -44,7 +48,28 @@ function Slider({
         onPointerDown={onCommitStart}
         onChange={(e) => onChange(Number(e.target.value))}
       />
-      <span className="insp-value">{value.toFixed(2)}</span>
+      <input
+        className="num-input"
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={draft ?? value.toFixed(decimals)}
+        onFocus={(e) => {
+          onCommitStart()
+          setDraft(value.toFixed(decimals))
+          e.target.select()
+        }}
+        onChange={(e) => {
+          setDraft(e.target.value)
+          const v = parseFloat(e.target.value)
+          if (isFinite(v)) onChange(clampV(v))
+        }}
+        onBlur={() => setDraft(null)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        }}
+      />
       {onKeyframe && (
         <button
           className={`btn kf ${hasKf ? 'active' : ''}`}
@@ -120,6 +145,7 @@ export function Inspector(): React.JSX.Element {
   const updateClip = useEditor((s) => s.updateClip)
   const beginInteraction = useEditor((s) => s.beginInteraction)
   const deleteClip = useEditor((s) => s.deleteClip)
+  const applyStyleToAllCaptions = useEditor((s) => s.applyStyleToAllCaptions)
 
   const loc = selectedClipId ? findClip(project, selectedClipId) : null
 
@@ -232,6 +258,18 @@ export function Inspector(): React.JSX.Element {
                 </button>
               </div>
             </div>
+            {clip.words && (
+              <div className="insp-row">
+                <span className="insp-label" />
+                <button
+                  className="btn small primary"
+                  title="Copy this caption's font, colors and position onto every auto caption"
+                  onClick={() => applyStyleToAllCaptions(clip.id)}
+                >
+                  Apply to all captions
+                </button>
+              </div>
+            )}
           </>
         )}
 
