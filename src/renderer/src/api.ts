@@ -24,7 +24,7 @@ interface Api {
   export2Frame(buf: ArrayBuffer): Promise<boolean>
   export2End(): Promise<ExportResult>
   export2Cancel(): Promise<void>
-  smokeSetup(): Promise<{ basePath: string; greenPath: string; outPath: string }>
+  smokeSetup(): Promise<{ basePath: string; greenPath: string; speechPath: string; outPath: string }>
   toolSilence(path: string, start: number, dur: number): Promise<{ start: number; end: number }[]>
   toolScenes(path: string, start: number, dur: number, thr?: number): Promise<number[]>
   toolBeats(path: string): Promise<{ beats: number[]; bpm: number }>

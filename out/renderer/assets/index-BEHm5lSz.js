@@ -15493,9 +15493,16 @@ function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const newProjectClick = () => {
+    if (!window.confirm("Start a new empty project? Current work stays autosaved.")) return;
+    const s = useEditor.getState();
+    s.init(newProject("My project", 1080, 1920));
+    s.setSaveState("dirty");
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "app", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "topbar", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "brand", children: "LocalCut" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "btn small", onClick: newProjectClick, title: "Start a new empty project", children: "New" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "project-name", title: "Rename in the Inspector (deselect any clip)", children: projectName }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `save-state ${saveState}`, children: saveState === "saved" ? "✓ saved" : saveState === "saving" ? "saving…" : "● unsaved" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "spacer" }),
@@ -15538,7 +15545,7 @@ async function boot() {
   window.__editor = useEditor;
   if (hasApi && new URLSearchParams(location.search).has("smoke")) {
     const { runSmoke } = await __vitePreload(async () => {
-      const { runSmoke: runSmoke2 } = await import("./smoke-CdW-CKR_.js");
+      const { runSmoke: runSmoke2 } = await import("./smoke-B-Am0WEm.js");
       return { runSmoke: runSmoke2 };
     }, true ? [] : void 0, import.meta.url);
     void runSmoke();

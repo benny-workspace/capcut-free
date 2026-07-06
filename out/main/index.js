@@ -1,9 +1,9 @@
 "use strict";
 const electron = require("electron");
+const child_process = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const stream = require("stream");
-const child_process = require("child_process");
 const os = require("os");
 const isNeutralColor = (c) => !c || c.exposure === 0 && c.contrast === 0 && c.saturation === 0 && c.temperature === 0;
 function projectDuration(project) {
@@ -1136,6 +1136,7 @@ async function smokeSetupAssets() {
   await fs.promises.mkdir(dir, { recursive: true });
   const basePath = path.join(dir, "base.mp4");
   const greenPath = path.join(dir, "green.mp4");
+  const speechPath = path.join(dir, "speech.mp4");
   const outPath = path.join(dir, "out.mp4");
   if (!fs.existsSync(basePath)) {
     await run(ffmpegPath(), [
@@ -1184,7 +1185,49 @@ async function smokeSetupAssets() {
       greenPath
     ]);
   }
-  return { basePath, greenPath, outPath };
+  if (!fs.existsSync(speechPath)) {
+    const wav = path.join(dir, "speech.wav");
+    const ps = [
+      "Add-Type -AssemblyName System.Speech;",
+      "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;",
+      `$s.SetOutputToWaveFile('${wav.replace(/'/g, "''")}');`,
+      "$s.Speak('Welcome to Local Cut.');",
+      "$b = New-Object System.Speech.Synthesis.PromptBuilder;",
+      "$b.AppendBreak([TimeSpan]::FromSeconds(2));",
+      "$s.Speak($b);",
+      "$s.Speak('Captions work offline.');",
+      "$s.Dispose();"
+    ].join(" ");
+    await new Promise((resolve) => {
+      const child = child_process.spawn("powershell", ["-NoProfile", "-Command", ps], { windowsHide: true });
+      child.on("close", () => resolve());
+      child.on("error", () => resolve());
+    });
+    await run(ffmpegPath(), [
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=size=640x360:rate=30",
+      "-i",
+      wav,
+      "-map",
+      "0:v",
+      "-map",
+      "1:a",
+      "-shortest",
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-preset",
+      "veryfast",
+      "-c:a",
+      "aac",
+      speechPath
+    ]);
+  }
+  return { basePath, greenPath, speechPath, outPath };
 }
 async function verifySmokeExport(outPath) {
   const p = await run(ffprobePath(), [
@@ -1370,6 +1413,11 @@ function createWindow() {
         try {
           const result = JSON.parse(message.slice("SMOKE-RESULT ".length));
           if (result.ok) pass = await verifySmokeExport(path.join(cacheDir(), "smoke", "out.mp4"));
+          const p2 = result.phase2;
+          if (pass && (!p2 || p2.segments < 2 || p2.captions < 1)) {
+            console.error(`SMOKE phase2 failed: ${JSON.stringify(p2)} (need >=2 segments, >=1 caption)`);
+            pass = false;
+          }
         } catch (e) {
           console.error("SMOKE verify error", e);
         }

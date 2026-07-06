@@ -1,4 +1,4 @@
-import { u as useEditor, a as api, d as defaultChromaKey, r as runFramePipeExport } from "./index-CoUpx5ug.js";
+import { u as useEditor, a as api, d as defaultChromaKey, r as runFramePipeExport } from "./index-BEHm5lSz.js";
 const log = (m) => console.warn("[smoke] " + m);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function runSmoke() {
@@ -50,7 +50,40 @@ async function runSmoke() {
       },
       { cancelled: false }
     );
-    console.warn("SMOKE-RESULT " + JSON.stringify(result));
+    let phase2 = { segments: 0, captions: 0 };
+    try {
+      const sp = (await api.ingest([assets.speechPath]))[0];
+      if (sp) {
+        st().addMedia([sp]);
+        st().addToTimeline(sp.id);
+        const main = st().project.tracks.find((t) => t.id === "main");
+        const spClip = main.clips[main.clips.length - 1];
+        const sil = await api.toolSilence(sp.path, 0, sp.duration);
+        const PAD = 0.075;
+        const keep = [];
+        let pos = 0;
+        for (const r of sil) {
+          const end = Math.min(r.start + PAD, sp.duration);
+          if (end - pos > 0.25) keep.push({ in: pos, duration: end - pos });
+          pos = Math.max(pos, r.end - PAD);
+        }
+        if (sp.duration - pos > 0.25) keep.push({ in: pos, duration: sp.duration - pos });
+        if (keep.length > 0) st().replaceClipWithSegments(spClip.id, keep);
+        const mainAfter = st().project.tracks.find((t) => t.id === "main");
+        const firstSeg = mainAfter.clips[mainAfter.clips.length - keep.length];
+        const tr = await api.toolTranscribe(sp.path, firstSeg.in, firstSeg.duration);
+        if (tr.ok && tr.words.length > 0) st().addCaptionClips(firstSeg.id, tr.words, false);
+        phase2 = {
+          segments: keep.length,
+          captions: st().project.tracks.find((t) => t.kind === "text").clips.length - 1
+          // minus the GL smoke title
+        };
+        log(`phase2: ${phase2.segments} silence-cut segments, ${phase2.captions} caption clips`);
+      }
+    } catch (e) {
+      log("phase2 failed: " + String(e));
+    }
+    console.warn("SMOKE-RESULT " + JSON.stringify({ ...result, phase2 }));
   } catch (e) {
     console.warn("SMOKE-RESULT " + JSON.stringify({ ok: false, error: String(e) }));
   }

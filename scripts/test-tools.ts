@@ -6,6 +6,8 @@ import { spawnSync } from 'child_process'
 import { existsSync, mkdirSync, rmSync } from 'fs'
 import { join, resolve } from 'path'
 import { detectBeats, detectScenes, detectSilence, transcribe, whisperAvailable } from '../src/main/tools'
+import { modnetAvailable } from '../src/main/tools'
+import { removeBackground } from '../src/main/toolsBg'
 
 const root = resolve(process.cwd())
 const ffmpeg = join(root, 'tools/ffmpeg/ffmpeg.exe')
@@ -96,6 +98,34 @@ async function main(): Promise<void> {
     check('word-timestamps', timed && tr.words.length > 5, `${tr.words.length} word stamps, monotonic`)
   } else {
     check('transcribe', false, 'whisper binary or model missing')
+  }
+
+  // ---- background removal pipeline (matte quality needs real portraits;
+  // this verifies decode -> MODNet -> VP9-alpha encode end to end) ----
+  if (modnetAvailable()) {
+    const fakeSender = { send: () => {} } as unknown as Parameters<typeof removeBackground>[0]
+    const bg = await removeBackground(fakeSender, sceneVid, 'testmedia', 4)
+    if (!bg.ok) {
+      check('bg-remove', false, bg.error || 'failed')
+    } else {
+      const probe = spawnSync(
+        join(root, 'tools/ffmpeg/ffprobe.exe'),
+        ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', bg.mattePath!],
+        { encoding: 'utf8', windowsHide: true }
+      )
+      const j = JSON.parse(probe.stdout || '{}')
+      const v = (j.streams || []).find((s: { codec_type: string }) => s.codec_type === 'video')
+      const dur = parseFloat(j.format?.duration ?? '0')
+      // VP9 alpha lives in container side data: stream tag alpha_mode=1
+      const hasAlpha = v?.tags?.alpha_mode === '1' || v?.pix_fmt?.startsWith('yuva')
+      check(
+        'bg-remove',
+        v?.codec_name === 'vp9' && hasAlpha && Math.abs(dur - 4) < 0.5,
+        `${v?.codec_name} alpha_mode=${v?.tags?.alpha_mode} ${dur.toFixed(2)}s -> ${bg.mattePath}`
+      )
+    }
+  } else {
+    check('bg-remove', false, 'modnet.onnx missing')
   }
 
   console.log(failures === 0 ? 'ALL TOOL TESTS PASSED' : `${failures} TOOL TEST(S) FAILED`)

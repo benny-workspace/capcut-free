@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { newProject } from '@shared/model'
 import { AutoEditDialog } from './components/AutoEdit'
 import { ExportDialog } from './components/ExportDialog'
 import { Inspector } from './components/Inspector'
@@ -58,10 +59,20 @@ export default function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const newProjectClick = (): void => {
+    if (!window.confirm('Start a new empty project? Current work stays autosaved.')) return
+    const s = useEditor.getState()
+    s.init(newProject('My project', 1080, 1920))
+    s.setSaveState('dirty') // autosave adopts the new project as "last"
+  }
+
   return (
     <div className="app">
       <div className="topbar">
         <span className="brand">LocalCut</span>
+        <button className="btn small" onClick={newProjectClick} title="Start a new empty project">
+          New
+        </button>
         <span className="project-name" title="Rename in the Inspector (deselect any clip)">
           {projectName}
         </span>
