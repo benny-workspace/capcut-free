@@ -1,0 +1,27 @@
+"use strict";
+const electron = require("electron");
+const RECEIVE_CHANNELS = ["media:proxy-ready", "export:progress"];
+const api = {
+  openMediaDialog: () => electron.ipcRenderer.invoke("dialog:open-media"),
+  savePathDialog: (defaultName) => electron.ipcRenderer.invoke("dialog:save-path", defaultName),
+  ingest: (paths) => electron.ipcRenderer.invoke("media:ingest", paths),
+  saveProject: (project) => electron.ipcRenderer.invoke("project:save", project),
+  loadLastProject: () => electron.ipcRenderer.invoke("project:load-last"),
+  exportRun: (project, settings, textPngs) => electron.ipcRenderer.invoke("export:run", project, settings, textPngs),
+  exportCancel: () => electron.ipcRenderer.invoke("export:cancel"),
+  export2Start: (project, settings) => electron.ipcRenderer.invoke("export2:start", project, settings),
+  export2Frame: (buf) => electron.ipcRenderer.invoke("export2:frame", buf),
+  export2End: () => electron.ipcRenderer.invoke("export2:end"),
+  export2Cancel: () => electron.ipcRenderer.invoke("export2:cancel"),
+  smokeSetup: () => electron.ipcRenderer.invoke("smoke:setup"),
+  sysInfo: () => electron.ipcRenderer.invoke("sys:info"),
+  showItemInFolder: (path) => electron.ipcRenderer.invoke("shell:show-item", path),
+  on: (channel, cb) => {
+    if (!RECEIVE_CHANNELS.includes(channel)) return () => {
+    };
+    const listener = (_e, payload) => cb(payload);
+    electron.ipcRenderer.on(channel, listener);
+    return () => electron.ipcRenderer.removeListener(channel, listener);
+  }
+};
+electron.contextBridge.exposeInMainWorld("api", api);
