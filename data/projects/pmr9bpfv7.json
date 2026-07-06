@@ -1,8 +1,8 @@
 {
  "id": "pmr9bpfv7",
  "name": "My project",
- "width": 1080,
- "height": 1920,
+ "width": 1920,
+ "height": 1080,
  "fps": 30,
  "media": [
   {
@@ -27,7 +27,7 @@
    "name": "Main",
    "clips": [
     {
-     "id": "cmr9dlshbz",
+     "id": "cmr9e0ych20",
      "kind": "video",
      "mediaId": "mmr9bq5xl0",
      "start": 0,
@@ -51,7 +51,7 @@
      }
     },
     {
-     "id": "cmr9dlshd10",
+     "id": "cmr9e0yco21",
      "kind": "video",
      "mediaId": "mmr9bq5xl0",
      "start": 26.791076999999998,
@@ -75,7 +75,7 @@
      }
     },
     {
-     "id": "cmr9dlshd11",
+     "id": "cmr9e0yco22",
      "kind": "video",
      "mediaId": "mmr9bq5xl0",
      "start": 27.956314999999996,
@@ -99,7 +99,7 @@
      }
     },
     {
-     "id": "cmr9dlshe12",
+     "id": "cmr9e0yco23",
      "kind": "video",
      "mediaId": "mmr9bq5xl0",
      "start": 36.792914,
@@ -123,7 +123,7 @@
      }
     },
     {
-     "id": "cmr9dlshe13",
+     "id": "cmr9e0yco24",
      "kind": "video",
      "mediaId": "mmr9bq5xl0",
      "start": 40.15651900000001,
@@ -147,7 +147,7 @@
      }
     },
     {
-     "id": "cmr9dlshe14",
+     "id": "cmr9e0yco25",
      "kind": "video",
      "mediaId": "mmr9bq5xl0",
      "start": 45.807018000000014,
@@ -184,7 +184,7 @@
    "name": "Text",
    "clips": [
     {
-     "id": "cmr9dlshe15",
+     "id": "cmr9e0yco26",
      "kind": "text",
      "start": 0.05,
      "duration": 1.4699999999999998,
@@ -194,7 +194,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -202,12 +202,12 @@
      "text": "This is the dog",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -235,7 +235,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe16",
+     "id": "cmr9e0yco27",
      "kind": "text",
      "start": 1.4,
      "duration": 1.1700000000000004,
@@ -245,7 +245,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -253,12 +253,12 @@
      "text": "of war So me",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -286,7 +286,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe17",
+     "id": "cmr9e0yco28",
      "kind": "text",
      "start": 2.45,
      "duration": 1.0099999999999998,
@@ -296,7 +296,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -304,12 +304,12 @@
      "text": "and my boy Nick",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -337,7 +337,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe18",
+     "id": "cmr9e0yco29",
      "kind": "text",
      "start": 3.34,
      "duration": 1.9800000000000004,
@@ -347,7 +347,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -355,12 +355,12 @@
      "text": "started a web agency,",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -388,7 +388,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe19",
+     "id": "cmr9e0yco2a",
      "kind": "text",
      "start": 5.2,
      "duration": 1.13,
@@ -398,7 +398,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -406,12 +406,12 @@
      "text": "but we don't have",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -439,7 +439,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1a",
+     "id": "cmr9e0yco2b",
      "kind": "text",
      "start": 6.21,
      "duration": 1.3100000000000005,
@@ -449,7 +449,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -457,12 +457,12 @@
      "text": "any clients Okay, so",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -490,7 +490,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1b",
+     "id": "cmr9e0yco2c",
      "kind": "text",
      "start": 7.4,
      "duration": 0.66,
@@ -500,7 +500,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -508,12 +508,12 @@
      "text": "I'm gonna be real",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -541,7 +541,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1c",
+     "id": "cmr9e0yco2d",
      "kind": "text",
      "start": 7.94,
      "duration": 1.0999999999999996,
@@ -551,7 +551,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -559,12 +559,12 @@
      "text": "with you. It's been",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -592,7 +592,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1d",
+     "id": "cmr9e0yco2e",
      "kind": "text",
      "start": 8.92,
      "duration": 1.2700000000000005,
@@ -602,7 +602,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -610,12 +610,12 @@
      "text": "four days We've sent",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -643,7 +643,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1e",
+     "id": "cmr9e0yco2f",
      "kind": "text",
      "start": 10.07,
      "duration": 2.249999999999999,
@@ -653,7 +653,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -661,12 +661,12 @@
      "text": "hundreds of client outreach",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -694,7 +694,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1f",
+     "id": "cmr9e0yco2g",
      "kind": "text",
      "start": 12.2,
      "duration": 1.6000000000000005,
@@ -704,7 +704,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -712,12 +712,12 @@
      "text": "DMs emails and we",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -745,7 +745,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1g",
+     "id": "cmr9e0yco2h",
      "kind": "text",
      "start": 13.68,
      "duration": 1.6700000000000008,
@@ -755,7 +755,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -763,12 +763,12 @@
      "text": "follow the systems But",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -796,7 +796,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1h",
+     "id": "cmr9e0yco2i",
      "kind": "text",
      "start": 15.23,
      "duration": 0.9200000000000007,
@@ -806,7 +806,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -814,12 +814,12 @@
      "text": "we haven't booked a",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -847,7 +847,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1i",
+     "id": "cmr9e0yco2j",
      "kind": "text",
      "start": 16.03,
      "duration": 1.3199999999999994,
@@ -857,7 +857,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -865,12 +865,12 @@
      "text": "single client yet. We've",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -898,7 +898,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1j",
+     "id": "cmr9e0yco2k",
      "kind": "text",
      "start": 17.23,
      "duration": 1.589999999999999,
@@ -908,7 +908,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -916,12 +916,12 @@
      "text": "sent hundreds of outreach.",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -949,7 +949,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1k",
+     "id": "cmr9e0yco2l",
      "kind": "text",
      "start": 18.7,
      "duration": 1.7600000000000007,
@@ -959,7 +959,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -967,12 +967,12 @@
      "text": "We have a bunch",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1000,7 +1000,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1l",
+     "id": "cmr9e0yco2m",
      "kind": "text",
      "start": 20.34,
      "duration": 1.8199999999999994,
@@ -1010,7 +1010,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1018,12 +1018,12 @@
      "text": "of systems and a",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1051,7 +1051,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1m",
+     "id": "cmr9e0yco2n",
      "kind": "text",
      "start": 22.04,
      "duration": 1.2200000000000015,
@@ -1061,7 +1061,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1069,12 +1069,12 @@
      "text": "war plan And we",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1102,7 +1102,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1n",
+     "id": "cmr9e0yco2o",
      "kind": "text",
      "start": 23.14,
      "duration": 1.5499999999999998,
@@ -1112,7 +1112,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1120,12 +1120,12 @@
      "text": "are following it",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1148,7 +1148,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1o",
+     "id": "cmr9e0yco2p",
      "kind": "text",
      "start": 27.240045,
      "duration": 2.035896,
@@ -1158,7 +1158,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1166,12 +1166,12 @@
      "text": "point is literally",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1194,7 +1194,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1p",
+     "id": "cmr9e0yco2q",
      "kind": "text",
      "start": 29.155941,
      "duration": 1.6299999999999981,
@@ -1204,7 +1204,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1212,12 +1212,12 @@
      "text": "the point. But we",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1245,7 +1245,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1q",
+     "id": "cmr9e0yco2r",
      "kind": "text",
      "start": 30.665940999999997,
      "duration": 1.1599999999999993,
@@ -1255,7 +1255,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1263,12 +1263,12 @@
      "text": "still have zero clients",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1296,7 +1296,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1r",
+     "id": "cmr9e0yco2s",
      "kind": "text",
      "start": 31.705940999999996,
      "duration": 1.2100000000000035,
@@ -1306,7 +1306,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1314,12 +1314,12 @@
      "text": "And instead of pretending",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1347,7 +1347,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1s",
+     "id": "cmr9e0yco2t",
      "kind": "text",
      "start": 32.795941,
      "duration": 1.2999999999999998,
@@ -1357,7 +1357,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1365,12 +1365,12 @@
      "text": "that's not happening, I'm",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1398,7 +1398,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1t",
+     "id": "cmr9e0yco2u",
      "kind": "text",
      "start": 33.975941,
      "duration": 1.1399999999999961,
@@ -1408,7 +1408,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1416,12 +1416,12 @@
      "text": "gonna show you what",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1449,7 +1449,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1u",
+     "id": "cmr9e0ycp2v",
      "kind": "text",
      "start": 34.995940999999995,
      "duration": 0.9900000000000045,
@@ -1459,7 +1459,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1467,12 +1467,12 @@
      "text": "we are gonna do",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1500,7 +1500,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1v",
+     "id": "cmr9e0ycp2w",
      "kind": "text",
      "start": 35.865941,
      "duration": 0.6799999999999952,
@@ -1510,7 +1510,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1518,12 +1518,12 @@
      "text": "about it",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1541,7 +1541,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1w",
+     "id": "cmr9e0ycp2x",
      "kind": "text",
      "start": 40.18204100000001,
      "duration": 0.3,
@@ -1551,7 +1551,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1559,12 +1559,12 @@
      "text": "This is the dog",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1592,7 +1592,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1x",
+     "id": "cmr9e0ycp2y",
      "kind": "text",
      "start": 40.25204100000001,
      "duration": 2.05,
@@ -1602,7 +1602,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1610,12 +1610,12 @@
      "text": "of war",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1633,7 +1633,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1y",
+     "id": "cmr9e0ycp2z",
      "kind": "text",
      "start": 46.844059000000016,
      "duration": 1.4900000000000047,
@@ -1643,7 +1643,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1651,12 +1651,12 @@
      "text": "Follow for more. This",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1684,7 +1684,7 @@
      ]
     },
     {
-     "id": "cmr9dlshe1z",
+     "id": "cmr9e0ycp30",
      "kind": "text",
      "start": 48.21405900000002,
      "duration": 0.9899999999999974,
@@ -1694,7 +1694,7 @@
      "speed": 1,
      "transform": {
       "x": 0,
-      "y": 0.3,
+      "y": 0.38,
       "scale": 1,
       "rotation": 0,
       "opacity": 1
@@ -1702,12 +1702,12 @@
      "text": "week isn't over yet",
      "textStyle": {
       "fontFamily": "Segoe UI",
-      "fontSize": 84,
+      "fontSize": 60,
       "color": "#ffffff",
       "bold": true,
       "italic": false,
       "outlineColor": "#000000",
-      "outlineWidth": 6,
+      "outlineWidth": 5,
       "bgColor": "",
       "align": "center"
      },
@@ -1744,5 +1744,5 @@
   }
  ],
  "createdAt": "2026-07-06T14:36:31.504Z",
- "modifiedAt": "2026-07-06T15:29:43.048Z"
+ "modifiedAt": "2026-07-06T15:41:28.039Z"
 }
