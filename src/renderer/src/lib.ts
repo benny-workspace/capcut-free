@@ -1,5 +1,5 @@
 import type { Clip, ColorAdjust, Project } from '@shared/model'
-import { defaultColor, isNeutralColor, transitionOverlap } from '@shared/model'
+import { defaultColor, transitionOverlap } from '@shared/model'
 
 export interface FitRect {
   w: number
@@ -109,17 +109,6 @@ export function proxyPending(type: string, vcodec: string | undefined, proxyPath
 }
 
 // ---------- color / filters ----------
-
-/** ctx.filter approximation of the export-side eq filter. */
-export function canvasFilterFor(color?: ColorAdjust): string {
-  if (isNeutralColor(color)) return 'none'
-  const c = color!
-  const parts: string[] = []
-  if (c.exposure !== 0) parts.push(`brightness(${(1 + c.exposure * 0.6).toFixed(3)})`)
-  if (c.contrast !== 0) parts.push(`contrast(${(1 + c.contrast).toFixed(3)})`)
-  if (c.saturation !== 0) parts.push(`saturate(${Math.max(0, 1 + c.saturation).toFixed(3)})`)
-  return parts.length > 0 ? parts.join(' ') : 'none'
-}
 
 export const FILTER_PRESETS: { name: string; color: ColorAdjust }[] = [
   { name: 'None', color: defaultColor() },

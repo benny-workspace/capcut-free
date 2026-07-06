@@ -1,20 +1,30 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
-import { createReadStream, promises as fs } from 'fs'
+import { createReadStream, existsSync, promises as fs } from 'fs'
 import { join } from 'path'
 import { Readable } from 'stream'
 import type { ExportSettings, MediaItem, Project, SysInfo } from '../shared/model'
-import { cancelExport, runExport } from './export'
 import {
+  cancelExport,
+  framePipeCancel,
+  framePipeEnd,
+  framePipeFrame,
+  framePipeStart,
+  runExport
+} from './export'
+import {
+  appRoot,
   detectQsv,
   ffmpegPath,
+  ffprobePath,
   ffmpegVersion,
   MEDIA_FILTERS,
   makeProxy,
   needsProxy,
   probeMedia,
+  run,
   thumbnailDataUrl
 } from './ffmpeg'
-import { ensureDataDirs, loadLastProject, proxiesDir, saveProject } from './projects'
+import { cacheDir, ensureDataDirs, loadLastProject, proxiesDir, saveProject } from './projects'
 
 const SMOKE = !!process.env.LOCALCUT_SMOKE
 
@@ -82,6 +92,62 @@ function registerMediaProtocol(): void {
       return new Response('not found', { status: 404 })
     }
   })
+}
+
+// ---------- smoke-test support: generated assets + rendered-file check ----------
+
+async function smokeSetupAssets(): Promise<{ basePath: string; greenPath: string; outPath: string }> {
+  const dir = join(cacheDir(), 'smoke')
+  await fs.mkdir(dir, { recursive: true })
+  const basePath = join(dir, 'base.mp4')
+  const greenPath = join(dir, 'green.mp4')
+  const outPath = join(dir, 'out.mp4')
+  if (!existsSync(basePath)) {
+    await run(ffmpegPath(), [
+      '-y', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=30:duration=4',
+      '-f', 'lavfi', '-i', 'sine=frequency=440:duration=4',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', '-c:a', 'aac', '-shortest',
+      basePath
+    ])
+  }
+  if (!existsSync(greenPath)) {
+    // green screen with a moving pattern box, for chroma-key verification
+    await run(ffmpegPath(), [
+      '-y', '-f', 'lavfi', '-i', 'color=c=0x00D000:s=640x360:r=30:d=4',
+      '-f', 'lavfi', '-i', 'testsrc2=s=160x120:r=30:d=4',
+      '-filter_complex', '[0][1]overlay=x=60+t*80:y=120',
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', '-t', '4',
+      greenPath
+    ])
+  }
+  return { basePath, greenPath, outPath }
+}
+
+async function verifySmokeExport(outPath: string): Promise<boolean> {
+  const p = await run(ffprobePath(), [
+    '-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', outPath
+  ])
+  if (p.code !== 0) {
+    console.error('SMOKE VERIFY: ffprobe failed on ' + outPath)
+    return false
+  }
+  try {
+    const j = JSON.parse(p.stdout.toString())
+    const v = (j.streams || []).find((s: { codec_type: string }) => s.codec_type === 'video')
+    const a = (j.streams || []).find((s: { codec_type: string }) => s.codec_type === 'audio')
+    const dur = parseFloat(j.format?.duration ?? '0')
+    console.log(
+      `SMOKE VERIFY dur=${dur.toFixed(2)}s video=${v ? `${v.width}x${v.height} ${v.codec_name}` : 'none'} audio=${a ? a.codec_name : 'none'}`
+    )
+    if (!v || !a) return false
+    if (Math.abs(dur - 4) > 0.4) return false
+    await run(ffmpegPath(), [
+      '-y', '-ss', '2', '-i', outPath, '-frames:v', '1', join(appRoot(), 'smoke-export-frame.png')
+    ])
+    return true
+  } catch {
+    return false
+  }
 }
 
 let win: BrowserWindow | null = null
@@ -161,6 +227,18 @@ function registerIpc(): void {
   )
 
   ipcMain.handle('export:cancel', () => cancelExport())
+
+  ipcMain.handle('export2:start', (_e, project: Project, settings: ExportSettings) =>
+    framePipeStart(project, settings)
+  )
+  ipcMain.handle('export2:frame', (_e, buf: ArrayBuffer) => framePipeFrame(buf))
+  ipcMain.handle('export2:end', () => framePipeEnd())
+  ipcMain.handle('export2:cancel', () => framePipeCancel())
+
+  ipcMain.handle('smoke:setup', async () => {
+    if (!SMOKE) throw new Error('smoke:setup is only available in smoke mode')
+    return smokeSetupAssets()
+  })
 
   ipcMain.handle('sys:info', async (): Promise<SysInfo> => {
     const version = await ffmpegVersion()

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Clip, MediaItem, Project, SysInfo, Track } from '@shared/model'
 import {
   MAIN_TRACK_ID,
+  defaultColor,
   defaultTextStyle,
   defaultTransform,
   newProject,
@@ -71,6 +72,7 @@ export interface EditorState {
   addToTimeline: (mediaId: string) => void
   addOverlayClip: (mediaId: string) => void
   addTextClip: () => void
+  addAdjustClip: () => void
   updateClip: (clipId: string, patch: Partial<Clip>, withUndo?: boolean) => void
   reorderMain: (clipId: string, newIndex: number) => void
   moveToTrack: (clipId: string, trackId: string, start: number, mainIndex?: number) => void
@@ -232,6 +234,31 @@ export const useEditor = create<EditorState>((set, get) => ({
         transform: defaultTransform(),
         text: 'Your text',
         textStyle: defaultTextStyle()
+      }
+      return {
+        project: replaceTrackClips(s.project, track.id, [...track.clips, clip]),
+        selectedClipId: clip.id,
+        undoStack: pushUndo(s),
+        redoStack: [],
+        saveState: 'dirty'
+      }
+    }),
+
+  addAdjustClip: () =>
+    set((s) => {
+      const track = s.project.tracks.find((t) => t.kind === 'overlay')
+      if (!track) return {}
+      const clip: Clip = {
+        id: uid('c'),
+        kind: 'adjust',
+        start: s.playhead,
+        duration: 3,
+        in: 0,
+        volume: 0,
+        muted: true,
+        speed: 1,
+        transform: defaultTransform(),
+        color: defaultColor()
       }
       return {
         project: replaceTrackClips(s.project, track.id, [...track.clips, clip]),

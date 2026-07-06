@@ -1,5 +1,5 @@
-import type { Clip, ColorAdjust, TextStyle, TransitionType } from '@shared/model'
-import { MAIN_TRACK_ID, defaultColor } from '@shared/model'
+import type { Clip, ColorAdjust, Mask, TextStyle, TransitionType } from '@shared/model'
+import { MAIN_TRACK_ID, defaultChromaKey, defaultColor, defaultMask } from '@shared/model'
 import { FILTER_PRESETS, FONT_FAMILIES } from '../lib'
 import { findClip, useEditor } from '../store'
 
@@ -123,7 +123,13 @@ export function Inspector(): React.JSX.Element {
     <div className="inspector">
       <div className="panel-header">
         <span>
-          {clip.kind === 'text' ? 'Text clip' : clip.kind === 'audio' ? 'Audio clip' : 'Clip'}
+          {clip.kind === 'text'
+            ? 'Text clip'
+            : clip.kind === 'audio'
+              ? 'Audio clip'
+              : clip.kind === 'adjust'
+                ? 'Adjustment layer'
+                : 'Clip'}
         </span>
         <button className="btn small danger" onClick={() => deleteClip(clip.id)}>
           Delete
@@ -205,7 +211,7 @@ export function Inspector(): React.JSX.Element {
           </>
         )}
 
-        {clip.kind !== 'audio' && (
+        {clip.kind !== 'audio' && clip.kind !== 'adjust' && (
           <>
             <div className="insp-section">Transform</div>
             <Slider label="X" value={t.x} min={-0.5} max={0.5} step={0.005} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ x: v })} />
@@ -213,6 +219,29 @@ export function Inspector(): React.JSX.Element {
             <Slider label="Scale" value={t.scale} min={0.05} max={3} step={0.01} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ scale: v })} />
             <Slider label="Rotation" value={t.rotation} min={-180} max={180} step={1} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ rotation: v })} />
             <Slider label="Opacity" value={t.opacity} min={0} max={1} step={0.01} onCommitStart={beginInteraction} onChange={(v) => patchTransform({ opacity: v })} />
+          </>
+        )}
+
+        {clip.kind === 'adjust' && (
+          <>
+            <div className="insp-section">Adjustment</div>
+            <Slider
+              label="Intensity"
+              value={t.opacity}
+              min={0}
+              max={1}
+              step={0.01}
+              onCommitStart={beginInteraction}
+              onChange={(v) => patchTransform({ opacity: v })}
+            />
+            <ColorSection clip={clip} />
+          </>
+        )}
+
+        {(clip.kind === 'video' || clip.kind === 'image') && (
+          <>
+            <ChromaSection clip={clip} />
+            <MaskSection clip={clip} />
           </>
         )}
 
@@ -285,6 +314,109 @@ export function Inspector(): React.JSX.Element {
         )}
       </div>
     </div>
+  )
+}
+
+function ChromaSection({ clip }: { clip: Clip }): React.JSX.Element {
+  const updateClip = useEditor((s) => s.updateClip)
+  const beginInteraction = useEditor((s) => s.beginInteraction)
+  const ck = clip.chromaKey
+
+  return (
+    <>
+      <div className="insp-section">Chroma key</div>
+      <label className="insp-row">
+        <span className="insp-label">Enabled</span>
+        <input
+          type="checkbox"
+          checked={!!ck?.enabled}
+          onChange={(e) =>
+            updateClip(clip.id, {
+              chromaKey: e.target.checked
+                ? { ...(ck ?? defaultChromaKey()), enabled: true }
+                : ck
+                  ? { ...ck, enabled: false }
+                  : undefined
+            })
+          }
+        />
+        {ck?.enabled && (
+          <>
+            <span className="insp-label">Key color</span>
+            <input
+              type="color"
+              value={ck.color}
+              onChange={(e) => updateClip(clip.id, { chromaKey: { ...ck, color: e.target.value } }, false)}
+            />
+          </>
+        )}
+      </label>
+      {ck?.enabled && (
+        <>
+          <Slider label="Similarity" value={ck.similarity} min={0.01} max={0.45} step={0.005} onCommitStart={beginInteraction} onChange={(v) => updateClip(clip.id, { chromaKey: { ...ck, similarity: v } }, false)} />
+          <Slider label="Smooth" value={ck.smoothness} min={0} max={0.4} step={0.005} onCommitStart={beginInteraction} onChange={(v) => updateClip(clip.id, { chromaKey: { ...ck, smoothness: v } }, false)} />
+          <Slider label="Spill" value={ck.spill} min={0} max={1} step={0.01} onCommitStart={beginInteraction} onChange={(v) => updateClip(clip.id, { chromaKey: { ...ck, spill: v } }, false)} />
+        </>
+      )}
+    </>
+  )
+}
+
+function MaskSection({ clip }: { clip: Clip }): React.JSX.Element {
+  const updateClip = useEditor((s) => s.updateClip)
+  const beginInteraction = useEditor((s) => s.beginInteraction)
+  const m = clip.mask
+  const patch = (p: Partial<Mask>): void => {
+    if (!m) return
+    updateClip(clip.id, { mask: { ...m, ...p } }, false)
+  }
+  const types: { label: string; value: Mask['type'] | null }[] = [
+    { label: 'None', value: null },
+    { label: 'Rect', value: 'rect' },
+    { label: 'Ellipse', value: 'ellipse' },
+    { label: 'Linear', value: 'linear' }
+  ]
+
+  return (
+    <>
+      <div className="insp-section">Mask</div>
+      <div className="insp-row">
+        <span className="insp-label">Type</span>
+        <div className="btn-group">
+          {types.map((tp) => (
+            <button
+              key={tp.label}
+              className={`btn small ${(m?.type ?? null) === tp.value ? 'active' : ''}`}
+              onClick={() =>
+                updateClip(clip.id, {
+                  mask: tp.value ? { ...defaultMask(tp.value), ...(m ? { ...m, type: tp.value } : {}) } : undefined
+                })
+              }
+            >
+              {tp.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {m && (
+        <>
+          <Slider label="Center X" value={m.cx} min={0} max={1} step={0.005} onCommitStart={beginInteraction} onChange={(v) => patch({ cx: v })} />
+          <Slider label="Center Y" value={m.cy} min={0} max={1} step={0.005} onCommitStart={beginInteraction} onChange={(v) => patch({ cy: v })} />
+          {m.type !== 'linear' && (
+            <>
+              <Slider label="Width" value={m.w} min={0.05} max={2} step={0.01} onCommitStart={beginInteraction} onChange={(v) => patch({ w: v })} />
+              <Slider label="Height" value={m.h} min={0.05} max={2} step={0.01} onCommitStart={beginInteraction} onChange={(v) => patch({ h: v })} />
+            </>
+          )}
+          <Slider label="Feather" value={m.feather} min={0} max={0.5} step={0.005} onCommitStart={beginInteraction} onChange={(v) => patch({ feather: v })} />
+          <Slider label="Rotation" value={m.rotation} min={-180} max={180} step={1} onCommitStart={beginInteraction} onChange={(v) => patch({ rotation: v })} />
+          <label className="insp-row">
+            <span className="insp-label">Invert</span>
+            <input type="checkbox" checked={m.invert} onChange={(e) => patch({ invert: e.target.checked })} />
+          </label>
+        </>
+      )}
+    </>
   )
 }
 

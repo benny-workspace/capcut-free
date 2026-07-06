@@ -566,6 +566,10 @@ input[type='checkbox'] {
   background: #1f5b50;
 }
 
+.tl-clip.kind-adjust {
+  background: #6b5620;
+}
+
 .tl-clip.selected {
   border-color: #fff;
   box-shadow: 0 0 0 1px #fff;

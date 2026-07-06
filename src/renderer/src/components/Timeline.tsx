@@ -10,6 +10,7 @@ const trackHeight = (kind: Track['kind']): number =>
 function trackAccepts(track: Track, clip: Clip): boolean {
   if (clip.kind === 'text') return track.kind === 'text'
   if (clip.kind === 'audio') return track.kind === 'audio'
+  if (clip.kind === 'adjust') return track.kind === 'overlay'
   return track.kind === 'video' || track.kind === 'overlay'
 }
 
@@ -258,6 +259,7 @@ export function Timeline(): React.JSX.Element {
   const splitAtPlayhead = useEditor((s) => s.splitAtPlayhead)
   const deleteClip = useEditor((s) => s.deleteClip)
   const addTextClip = useEditor((s) => s.addTextClip)
+  const addAdjustClip = useEditor((s) => s.addAdjustClip)
   const toggleSnap = useEditor((s) => s.toggleSnap)
   const setPps = useEditor((s) => s.setPps)
   const select = useEditor((s) => s.select)
@@ -278,6 +280,13 @@ export function Timeline(): React.JSX.Element {
         </button>
         <button className="btn" onClick={addTextClip} title="Add a text clip (T)">
           T Text
+        </button>
+        <button
+          className="btn"
+          onClick={addAdjustClip}
+          title="Add an adjustment layer — its color settings apply to everything below"
+        >
+          ◧ Adjust
         </button>
         <label className="snap-toggle">
           <input type="checkbox" checked={snap} onChange={toggleSnap} /> Snap

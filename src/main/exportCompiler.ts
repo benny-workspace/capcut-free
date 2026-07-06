@@ -115,6 +115,30 @@ function audioFades(clip: Clip, trans?: TransFades): string[] {
   return parts
 }
 
+/** One clip's full audio chain: trim -> retime -> fades -> gain -> position. */
+function appendAudioChain(
+  filters: string[],
+  audioLabels: string[],
+  idx: number,
+  clip: Clip,
+  trans: TransFades | undefined
+): void {
+  const speed = clip.speed || 1
+  const aLabel = `a${audioLabels.length}`
+  const delayMs = Math.max(0, Math.round(clip.start * 1000))
+  const parts = [
+    `atrim=start=${f(clip.in)}:end=${f(clip.in + clip.duration * speed)}`,
+    'asetpts=PTS-STARTPTS',
+    ...atempoChain(speed),
+    ...audioFades(clip, trans),
+    `volume=${f(clip.volume)}`,
+    'aresample=48000',
+    `adelay=${delayMs}:all=1`
+  ]
+  filters.push(`[${idx}:a]${parts.join(',')}[${aLabel}]`)
+  audioLabels.push(aLabel)
+}
+
 interface FitRect {
   w: number
   h: number
@@ -211,22 +235,8 @@ export function buildExportArgs(
     return parts
   }
 
-  const audioChain = (idx: number, clip: Clip): void => {
-    const speed = clip.speed || 1
-    const aLabel = `a${audioLabels.length}`
-    const delayMs = Math.max(0, Math.round(clip.start * 1000))
-    const parts = [
-      `atrim=start=${f(clip.in)}:end=${f(clip.in + clip.duration * speed)}`,
-      'asetpts=PTS-STARTPTS',
-      ...atempoChain(speed),
-      ...audioFades(clip, transFades.get(clip.id)),
-      `volume=${f(clip.volume)}`,
-      'aresample=48000',
-      `adelay=${delayMs}:all=1`
-    ]
-    filters.push(`[${idx}:a]${parts.join(',')}[${aLabel}]`)
-    audioLabels.push(aLabel)
-  }
+  const audioChain = (idx: number, clip: Clip): void =>
+    appendAudioChain(filters, audioLabels, idx, clip, transFades.get(clip.id))
 
   let vLabel = 0
   for (const clip of visualClips) {
@@ -321,6 +331,75 @@ export function buildExportArgs(
     '-movflags', '+faststart',
     '-progress', 'pipe:1',
     '-nostats',
+    settings.outPath
+  ]
+}
+
+/**
+ * FFmpeg invocation for the frame-pipe engine: video arrives as raw RGBA
+ * frames on stdin (rendered by the GPU compositor), audio is mixed with the
+ * same filtergraph logic as the fast path. GL readback is bottom-up, hence
+ * the vflip.
+ */
+export function buildFramePipeArgs(
+  project: Project,
+  settings: CompiledExportSettings
+): string[] {
+  const dur = Math.max(projectDuration(project), 0.1)
+  const mediaById = new Map<string, MediaItem>(project.media.map((m) => [m.id, m]))
+  const transFades = collectTransitionFades(project)
+  const inputArgs: string[] = []
+  const filters: string[] = []
+  const audioLabels: string[] = []
+  let inputCount = 1 // input 0 is the rawvideo pipe
+
+  for (const track of project.tracks) {
+    if (track.muted) continue
+    for (const clip of track.clips) {
+      if (clip.kind !== 'video' && clip.kind !== 'audio') continue
+      if (clip.muted || clip.volume <= 0) continue
+      const media = clip.mediaId ? mediaById.get(clip.mediaId) : undefined
+      if (!media || !media.hasAudio) continue
+      inputArgs.push('-i', media.path)
+      appendAudioChain(filters, audioLabels, inputCount++, clip, transFades.get(clip.id))
+    }
+  }
+
+  filters.push(`anullsrc=r=48000:cl=stereo,atrim=0:${f(dur)}[abase]`)
+  if (audioLabels.length > 0) {
+    filters.push(
+      `[abase]${audioLabels.map((l) => `[${l}]`).join('')}` +
+        `amix=inputs=${audioLabels.length + 1}:duration=first:normalize=0[aout]`
+    )
+  } else {
+    filters.push(`[abase]anull[aout]`)
+  }
+  filters.push(`[0:v]vflip,format=yuv420p[vout]`)
+
+  const enc =
+    settings.encoder === 'qsv'
+      ? ['-c:v', 'h264_qsv', '-b:v', `${settings.vBitrateK}k`, '-maxrate', `${Math.round(settings.vBitrateK * 1.5)}k`]
+      : ['-c:v', 'libx264', '-preset', 'fast', '-b:v', `${settings.vBitrateK}k`]
+
+  return [
+    '-y',
+    '-hide_banner',
+    '-f', 'rawvideo',
+    '-pix_fmt', 'rgba',
+    '-video_size', `${settings.width}x${settings.height}`,
+    '-framerate', String(settings.fps),
+    '-i', 'pipe:0',
+    ...inputArgs,
+    '-filter_complex',
+    filters.join(';'),
+    '-map', '[vout]',
+    '-map', '[aout]',
+    ...enc,
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    '-ar', '48000',
+    '-t', f(dur),
+    '-movflags', '+faststart',
     settings.outPath
   ]
 }

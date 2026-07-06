@@ -4,7 +4,7 @@ import { join } from 'path'
 import type { WebContents } from 'electron'
 import type { ExportResult, ExportSettings, Project } from '../shared/model'
 import { projectDuration } from '../shared/model'
-import { buildExportArgs, TextPngFile } from './exportCompiler'
+import { buildExportArgs, buildFramePipeArgs, TextPngFile } from './exportCompiler'
 import { detectQsv, ffmpegPath } from './ffmpeg'
 import { cacheDir } from './projects'
 
@@ -71,6 +71,80 @@ function runFfmpeg(
       resolve({ code, log })
     })
   })
+}
+
+// ---------- frame-pipe engine: raw RGBA frames from the GPU compositor ----------
+
+interface PipeSession {
+  child: ChildProcess
+  getLog: () => string
+  closed: Promise<number | null>
+}
+
+let pipe: PipeSession | null = null
+
+export async function framePipeStart(
+  project: Project,
+  settings: ExportSettings
+): Promise<{ ok: boolean; encoder?: string; error?: string }> {
+  if (pipe) {
+    pipe.child.kill('SIGKILL')
+    pipe = null
+  }
+  try {
+    const encoder: 'qsv' | 'x264' =
+      settings.encoder === 'auto' ? ((await detectQsv()) ? 'qsv' : 'x264') : settings.encoder
+    const args = buildFramePipeArgs(project, { ...settings, encoder })
+    const child = spawn(ffmpegPath(), args, { windowsHide: true })
+    let log = ''
+    child.stderr!.on('data', (d: Buffer) => {
+      log += d.toString()
+      if (log.length > 60000) log = log.slice(-40000)
+    })
+    child.stdin!.on('error', () => {}) // EPIPE when ffmpeg dies early; surfaced via exit code
+    child.on('error', (e) => {
+      log += '\nspawn error: ' + e.message
+    })
+    const closed = new Promise<number | null>((resolve) => child.on('close', resolve))
+    pipe = { child, getLog: () => log, closed }
+    return { ok: true, encoder }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+/** Returns false when ffmpeg is gone — the renderer stops sending frames. */
+export function framePipeFrame(buf: ArrayBuffer): Promise<boolean> {
+  const child = pipe?.child
+  if (!child || !child.stdin || child.stdin.destroyed || child.exitCode !== null) {
+    return Promise.resolve(false)
+  }
+  return new Promise((resolve) => {
+    const ok = child.stdin!.write(Buffer.from(buf), (err) => {
+      if (err) resolve(false)
+    })
+    if (ok) resolve(true)
+    else child.stdin!.once('drain', () => resolve(true))
+  })
+}
+
+export async function framePipeEnd(): Promise<ExportResult> {
+  if (!pipe) return { ok: false, error: 'no active frame-pipe export' }
+  const session = pipe
+  pipe = null
+  session.child.stdin?.end()
+  const code = await session.closed
+  if (code !== 0) {
+    return { ok: false, error: session.getLog().split('\n').slice(-15).join('\n') }
+  }
+  return { ok: true }
+}
+
+export function framePipeCancel(): void {
+  if (pipe) {
+    pipe.child.kill('SIGKILL')
+    pipe = null
+  }
 }
 
 export async function runExport(

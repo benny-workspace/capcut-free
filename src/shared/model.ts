@@ -41,7 +41,27 @@ export interface TextStyle {
   align: 'left' | 'center' | 'right'
 }
 
-export type ClipKind = 'video' | 'audio' | 'image' | 'text'
+export type ClipKind = 'video' | 'audio' | 'image' | 'text' | 'adjust'
+
+export interface ChromaKey {
+  enabled: boolean
+  color: string // hex key color
+  similarity: number // 0.01..0.45, CbCr distance below which pixels are fully keyed
+  smoothness: number // 0..0.4, feather band above similarity
+  spill: number // 0..1, desaturation of key-color spill near the edge
+}
+
+export interface Mask {
+  /** clip-local: coordinates are normalized to the clip's drawn rect */
+  type: 'rect' | 'ellipse' | 'linear'
+  cx: number // center x, 0..1
+  cy: number // center y, 0..1
+  w: number // 0..2 (rect/ellipse extent; linear ignores)
+  h: number // 0..2
+  feather: number // 0..0.5
+  rotation: number // degrees
+  invert: boolean
+}
 
 /** All values are -1..1, 0 = neutral. */
 export interface ColorAdjust {
@@ -70,6 +90,8 @@ export interface Clip {
   speed: number // playback rate; source seconds consumed = duration * speed
   transform: Transform
   color?: ColorAdjust
+  chromaKey?: ChromaKey
+  mask?: Mask
   fadeIn?: number // audio fade-in, seconds
   fadeOut?: number // audio fade-out, seconds
   /** main-track only: transition into the following clip */
@@ -147,6 +169,40 @@ export const isNeutralColor = (c?: ColorAdjust): boolean =>
 export function transitionOverlap(a: Clip, b: Clip | undefined): number {
   if (!a.transitionAfter || !b) return 0
   return Math.min(a.transitionAfter.duration, a.duration / 2, b.duration / 2)
+}
+
+export const defaultChromaKey = (): ChromaKey => ({
+  enabled: true,
+  color: '#00d000',
+  similarity: 0.12,
+  smoothness: 0.08,
+  spill: 0.5
+})
+
+export const defaultMask = (type: Mask['type']): Mask => ({
+  type,
+  cx: 0.5,
+  cy: 0.5,
+  w: 0.7,
+  h: 0.7,
+  feather: 0.05,
+  rotation: 0,
+  invert: false
+})
+
+/**
+ * True when the project uses effects the FFmpeg filtergraph engine can't
+ * express; export then renders video through the GPU compositor frame pipe.
+ */
+export function needsFramePipe(project: Project): boolean {
+  for (const t of project.tracks) {
+    for (const c of t.clips) {
+      if (c.kind === 'adjust') return true
+      if (c.chromaKey?.enabled) return true
+      if (c.mask) return true
+    }
+  }
+  return false
 }
 
 export const defaultTextStyle = (): TextStyle => ({
